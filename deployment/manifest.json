@@ -1,0 +1,11 @@
+{
+	"id": "kanban-board",
+	"name": "Kanban Board",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Create kanban boards from notes with specific tags and frontmatter properties",
+	"author": "Your Name",
+	"authorUrl": "https://your-website.com",
+	"fundingUrl": "https://buymeacoffee.com/your-name",
+	"isDesktopOnly": false
+}
