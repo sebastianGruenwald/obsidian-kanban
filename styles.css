@@ -4,9 +4,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 20px 16px;
     border-bottom: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
+    margin-bottom: 8px;
 }
 
 .kanban-board-title {
@@ -17,7 +18,7 @@
 
 .kanban-board-controls {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
 }
 
@@ -30,7 +31,34 @@
     cursor: pointer;
 }
 
-.kanban-refresh-btn {
+.kanban-sort-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.kanban-sort-label {
+    font-size: 0.9em;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.kanban-sort-selector, .kanban-sort-order-selector {
+    padding: 3px 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.kanban-sort-order-selector {
+    width: 40px;
+    text-align: center;
+}
+
+.kanban-refresh-btn, .kanban-add-column-btn {
     padding: 4px 8px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 4px;
@@ -40,7 +68,7 @@
     transition: background-color 0.2s ease;
 }
 
-.kanban-refresh-btn:hover {
+.kanban-refresh-btn:hover, .kanban-add-column-btn:hover {
     background: var(--background-modifier-hover);
 }
 
@@ -48,6 +76,7 @@
     display: flex;
     gap: 16px;
     padding: 16px;
+    margin-top: 0;
     overflow-x: auto;
     height: calc(100% - 80px);
     background: var(--background-primary);
@@ -60,6 +89,64 @@
     border-radius: 8px;
     flex-shrink: 0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+/* Column drag feedback */
+.kanban-column.column-dragging {
+    opacity: 0.6;
+    transform: rotate(3deg);
+    z-index: 1000;
+}
+
+.kanban-column.drop-target-available {
+    border: 2px dashed var(--interactive-accent-hover);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.kanban-column.drop-target-available::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    background: var(--interactive-accent);
+    opacity: 0.1;
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+.kanban-column-header.column-drag-over {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.kanban-column-header.column-drag-over::after {
+    content: "↓ Drop to reorder ↓";
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 1001;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: drop-indicator-bounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes drop-indicator-bounce {
+    from { transform: translateX(-50%) translateY(0); }
+    to { transform: translateX(-50%) translateY(-2px); }
 }
 
 .kanban-column-header {
@@ -71,6 +158,50 @@
     justify-content: space-between;
     background: var(--background-secondary-alt);
     border-radius: 8px 8px 0 0;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.kanban-column-header:active {
+    cursor: grabbing;
+}
+
+.kanban-column-title-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.kanban-column-title {
+    font-weight: 600;
+    color: var(--text-normal);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-column-drag-handle {
+    color: var(--text-muted);
+    cursor: grab;
+    font-size: 12px;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    padding: 2px;
+    border-radius: 2px;
+}
+
+.kanban-column-drag-handle:hover {
+    opacity: 1;
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
+.kanban-column-header:active .kanban-column-drag-handle {
+    cursor: grabbing;
 }
 
 .kanban-column-controls {

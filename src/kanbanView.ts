@@ -104,6 +104,47 @@ export class KanbanView extends ItemView {
 			await this.refresh();
 		});
 
+		// Sort dropdown
+		const sortContainer = controls.createDiv({ cls: 'kanban-sort-container' });
+		sortContainer.createEl('label', { text: 'Sort:', cls: 'kanban-sort-label' });
+		
+		const sortSelect = sortContainer.createEl('select', { cls: 'kanban-sort-selector' });
+		const sortOptions = [
+			{ value: 'none', text: 'No sorting' },
+			{ value: 'creation', text: 'Created' },
+			{ value: 'modification', text: 'Modified' },
+			{ value: 'title', text: 'Title' }
+		];
+		
+		sortOptions.forEach(option => {
+			const optionEl = sortSelect.createEl('option', { 
+				value: option.value, 
+				text: option.text 
+			});
+			if (option.value === this.currentBoard?.sortBy) {
+				optionEl.selected = true;
+			}
+		});
+
+		const orderSelect = sortContainer.createEl('select', { cls: 'kanban-sort-order-selector' });
+		orderSelect.createEl('option', { value: 'asc', text: '↑' });
+		orderSelect.createEl('option', { value: 'desc', text: '↓' });
+		orderSelect.value = this.currentBoard?.sortOrder || 'asc';
+
+		sortSelect.addEventListener('change', async (e) => {
+			const target = e.target as HTMLSelectElement;
+			this.plugin.boardManager.updateBoard(this.currentBoard!.id, { sortBy: target.value as any });
+			await this.plugin.saveSettings();
+			await this.refresh();
+		});
+
+		orderSelect.addEventListener('change', async (e) => {
+			const target = e.target as HTMLSelectElement;
+			this.plugin.boardManager.updateBoard(this.currentBoard!.id, { sortOrder: target.value as any });
+			await this.plugin.saveSettings();
+			await this.refresh();
+		});
+
 		// Add column button
 		const addColumnBtn = controls.createEl('button', { 
 			text: '+ Column', 
@@ -137,10 +178,25 @@ export class KanbanView extends ItemView {
 		header.addEventListener('dragstart', (e) => {
 			e.dataTransfer?.setData('text/column-name', columnName);
 			column.addClass('column-dragging');
+			
+			// Add visual indicators to all other columns
+			const allColumns = container.querySelectorAll('.kanban-column');
+			allColumns.forEach(col => {
+				if (col !== column) {
+					col.addClass('drop-target-available');
+				}
+			});
 		});
 		
 		header.addEventListener('dragend', () => {
 			column.removeClass('column-dragging');
+			
+			// Remove all visual indicators
+			const allColumns = container.querySelectorAll('.kanban-column');
+			allColumns.forEach(col => {
+				col.removeClass('drop-target-available');
+				col.querySelector('.kanban-column-header')?.removeClass('column-drag-over');
+			});
 		});
 		
 		// Make header a drop target for column reordering
@@ -151,8 +207,11 @@ export class KanbanView extends ItemView {
 			}
 		});
 		
-		header.addEventListener('dragleave', () => {
-			header.removeClass('column-drag-over');
+		header.addEventListener('dragleave', (e) => {
+			// Only remove if we're actually leaving the header area
+			if (!header.contains(e.relatedTarget as Node)) {
+				header.removeClass('column-drag-over');
+			}
 		});
 		
 		header.addEventListener('drop', async (e) => {
@@ -293,25 +352,38 @@ export class KanbanView extends ItemView {
 	private showColumnMenu(event: MouseEvent, columnName: string): void {
 		const menu = new Menu();
 		
-		// Only show delete option for custom columns
-		if (this.currentBoard?.customColumns.includes(columnName)) {
-			menu.addItem((item) => {
-				item.setTitle('Delete Column')
-					.setIcon('trash')
-					.onClick(async () => {
-						const success = this.plugin.boardManager.removeColumnFromBoard(this.currentBoard!.id, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							await this.refresh();
-						}
-					});
-			});
-		}
+		// Allow deletion of both custom and default columns
+		menu.addItem((item) => {
+			item.setTitle('Delete Column')
+				.setIcon('trash')
+				.onClick(async () => {
+					// Check if it's a default column or custom column
+					if (this.currentBoard?.defaultColumns.includes(columnName)) {
+						// Remove from default columns
+						const newDefaultColumns = this.currentBoard.defaultColumns.filter(col => col !== columnName);
+						this.plugin.boardManager.updateBoard(this.currentBoard.id, { defaultColumns: newDefaultColumns });
+					} else if (this.currentBoard?.customColumns.includes(columnName)) {
+						// Remove from custom columns
+						this.plugin.boardManager.removeColumnFromBoard(this.currentBoard.id, columnName);
+					}
+					
+					await this.plugin.saveSettings();
+					await this.refresh();
+				});
+		});
 		
-		// Show menu only if there are items
-		if (this.currentBoard?.customColumns.includes(columnName)) {
-			menu.showAtMouseEvent(event);
-		}
+		// Add rename option
+		menu.addItem((item) => {
+			item.setTitle('Rename Column')
+				.setIcon('pencil')
+				.onClick(() => {
+					new RenameColumnModal(this.app, this.plugin, this.currentBoard!.id, columnName, () => {
+						this.refresh();
+					}).open();
+				});
+		});
+		
+		menu.showAtMouseEvent(event);
 	}
 
 	private async reorderColumns(draggedColumn: string, targetColumn: string): Promise<void> {
@@ -628,6 +700,71 @@ class AddColumnModal extends Modal {
 							this.close();
 							this.onSubmit();
 						}
+					}
+				}))
+			.addButton(button => button
+				.setButtonText('Cancel')
+				.onClick(() => this.close()));
+	}
+}
+
+class RenameColumnModal extends Modal {
+	private columnInput: TextComponent;
+
+	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private oldColumnName: string, private onSubmit: () => void) {
+		super(app);
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: `Rename Column: ${this.oldColumnName}` });
+
+		new Setting(contentEl)
+			.setName('New Column Name')
+			.addText(text => {
+				this.columnInput = text;
+				text.setPlaceholder(this.oldColumnName);
+				text.setValue(this.oldColumnName);
+				text.inputEl.select();
+			});
+
+		new Setting(contentEl)
+			.addButton(button => button
+				.setButtonText('Rename')
+				.setCta()
+				.onClick(async () => {
+					const newColumnName = this.columnInput.getValue().trim();
+					
+					if (newColumnName && newColumnName !== this.oldColumnName) {
+						const board = this.plugin.boardManager.getBoard(this.boardId);
+						if (!board) return;
+
+						// Handle renaming for default columns
+						if (board.defaultColumns.includes(this.oldColumnName)) {
+							const newDefaultColumns = board.defaultColumns.map(col => 
+								col === this.oldColumnName ? newColumnName : col
+							);
+							this.plugin.boardManager.updateBoard(this.boardId, { defaultColumns: newDefaultColumns });
+						}
+						
+						// Handle renaming for custom columns
+						if (board.customColumns.includes(this.oldColumnName)) {
+							this.plugin.boardManager.removeColumnFromBoard(this.boardId, this.oldColumnName);
+							this.plugin.boardManager.addColumnToBoard(this.boardId, newColumnName);
+						}
+
+						// Update column order if it exists
+						if (board.columnOrder.includes(this.oldColumnName)) {
+							const newOrder = board.columnOrder.map(col => 
+								col === this.oldColumnName ? newColumnName : col
+							);
+							this.plugin.boardManager.updateColumnOrder(this.boardId, newOrder);
+						}
+
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+						this.close();
+						this.onSubmit();
 					}
 				}))
 			.addButton(button => button
