@@ -104,6 +104,18 @@ export class KanbanView extends ItemView {
 			await this.refresh();
 		});
 
+		// Add column button
+		const addColumnBtn = controls.createEl('button', { 
+			text: '+ Column', 
+			cls: 'kanban-add-column-btn',
+			attr: { title: 'Add new column' }
+		});
+		addColumnBtn.addEventListener('click', () => {
+			new AddColumnModal(this.app, this.plugin, this.currentBoard!.id, () => {
+				this.refresh();
+			}).open();
+		});
+
 		// Refresh button
 		const refreshBtn = controls.createEl('button', { 
 			text: '⟳', 
@@ -115,10 +127,47 @@ export class KanbanView extends ItemView {
 
 	private createColumn(container: HTMLElement, columnName: string, cards: KanbanCard[]): void {
 		const column = container.createDiv({ cls: 'kanban-column' });
+		column.setAttribute('data-column-name', columnName);
 		
 		// Column header
 		const header = column.createDiv({ cls: 'kanban-column-header' });
-		const title = header.createSpan({ text: columnName });
+		
+		// Make header draggable for column reordering
+		header.draggable = true;
+		header.addEventListener('dragstart', (e) => {
+			e.dataTransfer?.setData('text/column-name', columnName);
+			column.addClass('column-dragging');
+		});
+		
+		header.addEventListener('dragend', () => {
+			column.removeClass('column-dragging');
+		});
+		
+		// Make header a drop target for column reordering
+		header.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			if (e.dataTransfer?.types.includes('text/column-name')) {
+				header.addClass('column-drag-over');
+			}
+		});
+		
+		header.addEventListener('dragleave', () => {
+			header.removeClass('column-drag-over');
+		});
+		
+		header.addEventListener('drop', async (e) => {
+			e.preventDefault();
+			header.removeClass('column-drag-over');
+			
+			const draggedColumnName = e.dataTransfer?.getData('text/column-name');
+			if (draggedColumnName && draggedColumnName !== columnName) {
+				await this.reorderColumns(draggedColumnName, columnName);
+			}
+		});
+		
+		const titleContainer = header.createDiv({ cls: 'kanban-column-title-container' });
+		const title = titleContainer.createSpan({ text: columnName, cls: 'kanban-column-title' });
+		const dragHandle = titleContainer.createSpan({ text: '⋮⋮', cls: 'kanban-column-drag-handle' });
 		
 		const headerControls = header.createDiv({ cls: 'kanban-column-controls' });
 		
@@ -258,20 +307,31 @@ export class KanbanView extends ItemView {
 					});
 			});
 		}
-
-		menu.addSeparator();
-
-		menu.addItem((item) => {
-			item.setTitle('Add New Column')
-				.setIcon('plus')
-				.onClick(() => {
-					new AddColumnModal(this.app, this.plugin, this.currentBoard!.id, () => {
-						this.refresh();
-					}).open();
-				});
-		});
 		
-		menu.showAtMouseEvent(event);
+		// Show menu only if there are items
+		if (this.currentBoard?.customColumns.includes(columnName)) {
+			menu.showAtMouseEvent(event);
+		}
+	}
+
+	private async reorderColumns(draggedColumn: string, targetColumn: string): Promise<void> {
+		if (!this.currentBoard) return;
+		
+		const currentOrder = this.columns;
+		const draggedIndex = currentOrder.indexOf(draggedColumn);
+		const targetIndex = currentOrder.indexOf(targetColumn);
+		
+		if (draggedIndex === -1 || targetIndex === -1) return;
+		
+		// Create new order
+		const newOrder = [...currentOrder];
+		newOrder.splice(draggedIndex, 1);
+		newOrder.splice(targetIndex, 0, draggedColumn);
+		
+		// Update board configuration
+		this.plugin.boardManager.updateColumnOrder(this.currentBoard.id, newOrder);
+		await this.plugin.saveSettings();
+		await this.refresh();
 	}
 
 	private makeDroppable(element: HTMLElement, columnName: string): void {

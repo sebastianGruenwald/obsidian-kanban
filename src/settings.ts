@@ -22,10 +22,8 @@ export class KanbanSettingTab extends PluginSettingTab {
 		// Board selection and management
 		this.displayBoardManagement(containerEl);
 
-		// Current board settings
-		if (this.currentBoardId) {
-			this.displayBoardSettings(containerEl);
-		}
+		// All boards settings
+		this.displayAllBoardsSettings(containerEl);
 
 		// Global settings
 		this.displayGlobalSettings(containerEl);
@@ -34,24 +32,6 @@ export class KanbanSettingTab extends PluginSettingTab {
 	private displayBoardManagement(containerEl: HTMLElement): void {
 		const boardSection = containerEl.createDiv({ cls: 'setting-section' });
 		boardSection.createEl('h3', { text: 'Board Management' });
-
-		// Board selector
-		new Setting(boardSection)
-			.setName('Active Board')
-			.setDesc('Select which board to configure')
-			.addDropdown(dropdown => {
-				const boards = this.plugin.boardManager.getAllBoards();
-				boards.forEach(board => {
-					dropdown.addOption(board.id, board.name);
-				});
-				dropdown.setValue(this.currentBoardId);
-				dropdown.onChange(async (value) => {
-					this.currentBoardId = value;
-					this.plugin.settings.activeBoard = value;
-					await this.plugin.saveSettings();
-					this.display(); // Refresh the settings
-				});
-			});
 
 		// Add new board button
 		new Setting(boardSection)
@@ -64,77 +44,85 @@ export class KanbanSettingTab extends PluginSettingTab {
 						this.display();
 					}).open();
 				}));
-
-		// Delete board button (only if more than one board exists)
-		const boards = this.plugin.boardManager.getAllBoards();
-		if (boards.length > 1) {
-			new Setting(boardSection)
-				.setName('Delete Current Board')
-				.setDesc('Delete the currently selected board')
-				.addButton(button => button
-					.setButtonText('Delete Board')
-					.setWarning()
-					.onClick(async () => {
-						const success = this.plugin.boardManager.deleteBoard(this.currentBoardId);
-						if (success) {
-							const remainingBoards = this.plugin.boardManager.getAllBoards();
-							this.currentBoardId = remainingBoards[0].id;
-							this.plugin.settings.activeBoard = this.currentBoardId;
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.display();
-						}
-					}));
-		}
 	}
 
-	private displayBoardSettings(containerEl: HTMLElement): void {
-		const board = this.plugin.boardManager.getBoard(this.currentBoardId);
-		if (!board) return;
+	private displayAllBoardsSettings(containerEl: HTMLElement): void {
+		const boards = this.plugin.boardManager.getAllBoards();
+		
+		boards.forEach(board => {
+			this.displayBoardSettings(containerEl, board);
+		});
+	}
 
-		const boardSection = containerEl.createDiv({ cls: 'setting-section' });
-		boardSection.createEl('h3', { text: `Board Settings: ${board.name}` });
+	private displayBoardSettings(containerEl: HTMLElement, board: BoardConfig): void {
+		const boardSection = containerEl.createDiv({ cls: 'setting-section board-settings' });
+		
+		// Expandable header
+		const headerDiv = boardSection.createDiv({ cls: 'board-settings-header' });
+		const isExpanded = board.id === this.currentBoardId;
+		
+		const toggleBtn = headerDiv.createEl('button', { 
+			text: isExpanded ? '▼' : '▶',
+			cls: 'board-settings-toggle'
+		});
+		
+		const headerTitle = headerDiv.createEl('h3', { 
+			text: `${board.name}${board.id === this.plugin.settings.activeBoard ? ' (Active)' : ''}`,
+			cls: 'board-settings-title'
+		});
+		
+		const contentDiv = boardSection.createDiv({ 
+			cls: 'board-settings-content',
+			attr: { style: isExpanded ? 'display: block' : 'display: none' }
+		});
+		
+		toggleBtn.addEventListener('click', () => {
+			const isCurrentlyExpanded = contentDiv.style.display === 'block';
+			contentDiv.style.display = isCurrentlyExpanded ? 'none' : 'block';
+			toggleBtn.setText(isCurrentlyExpanded ? '▶' : '▼');
+			this.currentBoardId = isCurrentlyExpanded ? '' : board.id;
+		});
 
 		// Board name
-		new Setting(boardSection)
+		new Setting(contentDiv)
 			.setName('Board Name')
 			.setDesc('Name of this kanban board')
 			.addText(text => text
 				.setValue(board.name)
 				.onChange(async (value) => {
-					this.plugin.boardManager.updateBoard(this.currentBoardId, { name: value });
+					this.plugin.boardManager.updateBoard(board.id, { name: value });
 					await this.plugin.saveSettings();
 					this.display();
 				}));
 
 		// Tag filter
-		new Setting(boardSection)
+		new Setting(contentDiv)
 			.setName('Tag filter')
 			.setDesc('Only notes with this tag will be included in this board')
 			.addText(text => text
 				.setPlaceholder('#kanban')
 				.setValue(board.tagFilter)
 				.onChange(async (value) => {
-					this.plugin.boardManager.updateBoard(this.currentBoardId, { tagFilter: value });
+					this.plugin.boardManager.updateBoard(board.id, { tagFilter: value });
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
 				}));
 
 		// Column property
-		new Setting(boardSection)
+		new Setting(contentDiv)
 			.setName('Column property')
 			.setDesc('Frontmatter property that determines which column a note belongs to')
 			.addText(text => text
 				.setPlaceholder('status')
 				.setValue(board.columnProperty)
 				.onChange(async (value) => {
-					this.plugin.boardManager.updateBoard(this.currentBoardId, { columnProperty: value });
+					this.plugin.boardManager.updateBoard(board.id, { columnProperty: value });
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
 				}));
 
 		// Default columns
-		new Setting(boardSection)
+		new Setting(contentDiv)
 			.setName('Default columns')
 			.setDesc('Columns that will always appear, even if empty (comma-separated)')
 			.addTextArea(text => text
@@ -145,19 +133,19 @@ export class KanbanSettingTab extends PluginSettingTab {
 						.split(',')
 						.map(col => col.trim())
 						.filter(col => col.length > 0);
-					this.plugin.boardManager.updateBoard(this.currentBoardId, { defaultColumns: columns });
+					this.plugin.boardManager.updateBoard(board.id, { defaultColumns: columns });
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
 				}));
 
 		// Custom columns management
-		this.displayColumnManagement(boardSection, board);
+		this.displayColumnManagement(contentDiv, board);
 
 		// Visible properties
-		this.displayVisibleProperties(boardSection, board);
+		this.displayVisibleProperties(contentDiv, board);
 
 		// Sort settings
-		new Setting(boardSection)
+		new Setting(contentDiv)
 			.setName('Sort by')
 			.setDesc('How to sort cards within columns')
 			.addDropdown(dropdown => dropdown
@@ -167,12 +155,12 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.addOption('none', 'No sorting')
 				.setValue(board.sortBy)
 				.onChange(async (value) => {
-					this.plugin.boardManager.updateBoard(this.currentBoardId, { sortBy: value as any });
+					this.plugin.boardManager.updateBoard(board.id, { sortBy: value as any });
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
 				}));
 
-		new Setting(boardSection)
+		new Setting(contentDiv)
 			.setName('Sort order')
 			.setDesc('Sort order for cards within columns')
 			.addDropdown(dropdown => dropdown
@@ -180,10 +168,34 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.addOption('desc', 'Descending')
 				.setValue(board.sortOrder)
 				.onChange(async (value) => {
-					this.plugin.boardManager.updateBoard(this.currentBoardId, { sortOrder: value as any });
+					this.plugin.boardManager.updateBoard(board.id, { sortOrder: value as any });
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
 				}));
+
+		// Delete board button (only if more than one board exists)
+		const allBoards = this.plugin.boardManager.getAllBoards();
+		if (allBoards.length > 1) {
+			new Setting(contentDiv)
+				.setName('Delete Board')
+				.setDesc(`Delete the "${board.name}" board permanently`)
+				.addButton(button => button
+					.setButtonText('Delete Board')
+					.setWarning()
+					.onClick(async () => {
+						const success = this.plugin.boardManager.deleteBoard(board.id);
+						if (success) {
+							// If this was the active board, switch to another one
+							if (board.id === this.plugin.settings.activeBoard) {
+								const remainingBoards = this.plugin.boardManager.getAllBoards();
+								this.plugin.settings.activeBoard = remainingBoards[0].id;
+							}
+							await this.plugin.saveSettings();
+							this.plugin.refreshAllViews();
+							this.display();
+						}
+					}));
+		}
 	}
 
 	private displayColumnManagement(containerEl: HTMLElement, board: BoardConfig): void {
@@ -198,7 +210,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 					.setButtonText('Remove')
 					.setWarning()
 					.onClick(async () => {
-						this.plugin.boardManager.removeColumnFromBoard(this.currentBoardId, column);
+						this.plugin.boardManager.removeColumnFromBoard(board.name, column);
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
 						this.display();
@@ -212,7 +224,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Add Column')
 				.onClick(() => {
-					new AddColumnModalSettings(this.app, this.plugin, this.currentBoardId, () => {
+					new AddColumnModalSettings(this.app, this.plugin, board.name, () => {
 						this.display();
 					}).open();
 				}));
@@ -234,7 +246,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 						const visibleProperties = value 
 							? [...board.visibleProperties, property]
 							: board.visibleProperties.filter(p => p !== property);
-						this.plugin.boardManager.updateBoard(this.currentBoardId, { visibleProperties });
+						this.plugin.boardManager.updateBoard(board.name, { visibleProperties });
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
 					}));
