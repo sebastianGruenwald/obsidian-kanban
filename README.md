@@ -1,51 +1,150 @@
 # Obsidian Kanban Board Plugin
 
-A plugin for Obsidian that creates kanban boards from notes with specific tags and frontmatter properties.
+A powerful plugin for Obsidian that creates customizable kanban boards from notes with specific tags and frontmatter properties.
 
-## Features
+## 🎯 Features
 
-- Create kanban boards from notes with specific tags (e.g., `#kanban`)
-- Define columns using frontmatter properties
-- Drag and drop cards between columns
-- Sort and filter cards by various criteria (creation date, etc.)
-- Store column order and layout in plugin settings
-- Auto-refresh when files change
+### Multiple Boards
+- **Multiple kanban boards** with different tag filters
+- **Board switching** via dropdown selector
+- **Board-specific settings** and configurations
+- **Independent column management** per board
 
-## Installation
+### Dynamic Columns
+- **Frontmatter-based columns** using any property
+- **Add/remove custom columns** per board
+- **Default columns** that always appear
+- **Column ordering** and layout persistence
 
-1. Download the plugin files
-2. Place them in your vault's `.obsidian/plugins/kanban-board/` folder
-3. Enable the plugin in Obsidian's Community Plugins settings
+### Card Management
+- **Drag and drop** cards between columns
+- **Create new cards** with + button in column headers
+- **Configurable card properties** (what to display on cards)
+- **Sort and filter** cards by various criteria
 
-## Usage
+### Customization
+- **Visible properties** per board (creation date, tags, custom fields)
+- **Auto-refresh** when files change
+- **Responsive design** for mobile and desktop
+- **Theme-aware** styling
 
-1. Add the tag you configured (default: `#kanban`) to notes you want to include in the kanban board
-2. Add a frontmatter property to define the column (default property: `status`)
-3. Open the kanban board view from the ribbon or command palette
+## 🚀 Quick Start
 
-Example note:
-```markdown
----
-status: "In Progress"
----
+1. Install the plugin in Obsidian
+2. Create notes with:
+   ```yaml
+   ---
+   status: "In Progress"
+   priority: "high"
+   ---
+   
+   # My Task
+   Task description here.
+   
+   #kanban
+   ```
+3. Open kanban board from ribbon or command palette
+4. Drag cards between columns or use the + button to create new cards
 
-# My Task
+## 📋 Usage
 
-This is a task that should appear in the kanban board.
+### Creating Boards
+1. Go to Settings → Kanban Board
+2. Click "Create Board"
+3. Set a name and tag filter (e.g., `#project-alpha`)
+4. Configure columns and visible properties
 
-#kanban
-```
+### Managing Columns
+- **Add columns**: Use + button in column headers or settings
+- **Remove columns**: Right-click column header → Delete (custom columns only)
+- **Reorder columns**: Drag and drop (coming soon) or configure in settings
 
-## Settings
+### Card Properties
+Configure which frontmatter properties appear on cards:
+- Title (always shown)
+- Creation/modification dates
+- Tags
+- Custom frontmatter fields
 
-- **Tag Filter**: The tag to filter notes by (default: `#kanban`)
-- **Column Property**: The frontmatter property that defines the column (default: `status`)
-- **Default Columns**: Predefined columns that will always appear
-- **Sort Options**: Configure how cards are sorted within columns
+### Example Board Configurations
 
-## Development
+**Project Management Board**
+- Tag: `#project`
+- Columns: `Backlog`, `In Progress`, `Review`, `Done`
+- Properties: `title`, `created`, `assignee`, `priority`
 
+**Content Creation Board**
+- Tag: `#content`
+- Columns: `Ideas`, `Writing`, `Review`, `Published`
+- Properties: `title`, `created`, `tags`, `word-count`
+
+## ⚙️ Settings
+
+### Board Management
+- Create/delete boards
+- Switch between boards
+- Configure board-specific settings
+
+### Column Configuration
+- Set default columns
+- Add/remove custom columns
+- Configure column property name
+
+### Display Options
+- Choose visible card properties
+- Show/hide file counts
+- Enable auto-refresh
+- Sort options (creation date, title, etc.)
+
+## 🔧 Installation
+
+### Manual Installation
+1. Download `main.js`, `manifest.json`, and `styles.css`
+2. Create folder: `<vault>/.obsidian/plugins/kanban-board/`
+3. Copy files to this folder
+4. Enable plugin in Settings → Community Plugins
+
+### Development
 ```bash
+git clone <repository>
+cd obsidian-kanban
 npm install
 npm run dev
 ```
+
+## 🎨 Customization
+
+### Custom Styling
+Add CSS snippets to customize appearance:
+```css
+.kanban-card {
+    /* Your custom card styling */
+}
+
+.kanban-column {
+    /* Your custom column styling */
+}
+```
+
+### Board Templates
+Create template boards for different use cases:
+- Personal task management
+- Team project tracking
+- Content pipeline management
+- Study/research organization
+
+## 📖 Examples
+
+See `EXAMPLES.md` for detailed usage examples and board configurations.
+
+## 🔄 Changelog
+
+See `CHANGELOG.md` for version history and updates.
+
+## 🤝 Contributing
+
+Contributions welcome! Please read the contributing guidelines and submit pull requests.
+
+## 📄 License
+
+MIT License - see LICENSE file for details.

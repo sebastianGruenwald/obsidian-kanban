@@ -1,8 +1,8 @@
 import { TFile, FrontMatterCache, CachedMetadata } from 'obsidian';
-import { KanbanCard, KanbanSettings } from './types';
+import { KanbanCard, BoardConfig } from './types';
 
 export class DataManager {
-	constructor(private app: any, private settings: KanbanSettings) {}
+	constructor(private app: any, private boardConfig: BoardConfig) {}
 
 	async getKanbanCards(): Promise<KanbanCard[]> {
 		const files = this.app.vault.getMarkdownFiles();
@@ -25,7 +25,7 @@ export class DataManager {
 		
 		// Check if file has the required tag
 		const tags = this.getAllTags(cache);
-		return tags.includes(this.settings.tagFilter);
+		return tags.includes(this.boardConfig.tagFilter);
 	}
 
 	private getAllTags(cache: CachedMetadata | null): string[] {
@@ -54,7 +54,7 @@ export class DataManager {
 		const content = await this.app.vault.read(file);
 		
 		const frontmatter = cache?.frontmatter || {};
-		const column = frontmatter[this.settings.columnProperty] || 'Uncategorized';
+		const column = frontmatter[this.boardConfig.columnProperty] || 'Uncategorized';
 		
 		return {
 			file: file.path,
@@ -68,14 +68,14 @@ export class DataManager {
 	}
 
 	private sortCards(cards: KanbanCard[]): KanbanCard[] {
-		if (this.settings.sortBy === 'none') {
+		if (this.boardConfig.sortBy === 'none') {
 			return cards;
 		}
 
 		return cards.sort((a, b) => {
 			let comparison = 0;
 
-			switch (this.settings.sortBy) {
+			switch (this.boardConfig.sortBy) {
 				case 'creation':
 					comparison = a.created - b.created;
 					break;
@@ -87,18 +87,18 @@ export class DataManager {
 					break;
 			}
 
-			return this.settings.sortOrder === 'desc' ? -comparison : comparison;
+			return this.boardConfig.sortOrder === 'desc' ? -comparison : comparison;
 		});
 	}
 
 	getColumns(cards: KanbanCard[]): string[] {
 		const columnsFromCards = [...new Set(cards.map(card => card.column))];
-		const allColumns = [...new Set([...this.settings.defaultColumns, ...columnsFromCards])];
+		const allColumns = [...new Set([...this.boardConfig.defaultColumns, ...this.boardConfig.customColumns, ...columnsFromCards])];
 		
 		// Apply custom column order if set
-		if (this.settings.columnOrder.length > 0) {
-			const orderedColumns = this.settings.columnOrder.filter(col => allColumns.includes(col));
-			const remainingColumns = allColumns.filter(col => !this.settings.columnOrder.includes(col));
+		if (this.boardConfig.columnOrder.length > 0) {
+			const orderedColumns = this.boardConfig.columnOrder.filter(col => allColumns.includes(col));
+			const remainingColumns = allColumns.filter(col => !this.boardConfig.columnOrder.includes(col));
 			return [...orderedColumns, ...remainingColumns];
 		}
 		
@@ -110,9 +110,40 @@ export class DataManager {
 		if (!(file instanceof TFile)) return;
 
 		const content = await this.app.vault.read(file);
-		const updatedContent = this.updateFrontmatterProperty(content, this.settings.columnProperty, newColumn);
+		const updatedContent = this.updateFrontmatterProperty(content, this.boardConfig.columnProperty, newColumn);
 		
 		await this.app.vault.modify(file, updatedContent);
+	}
+
+	async createNewCard(columnName: string, title: string): Promise<void> {
+		const fileName = `${title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim()}.md`;
+		const filePath = `${fileName}`;
+		
+		// Check if file already exists, if so, add a number
+		let finalPath = filePath;
+		let counter = 1;
+		while (this.app.vault.getAbstractFileByPath(finalPath)) {
+			const nameWithoutExt = fileName.replace('.md', '');
+			finalPath = `${nameWithoutExt} ${counter}.md`;
+			counter++;
+		}
+
+		const frontmatter = {
+			[this.boardConfig.columnProperty]: columnName
+		};
+
+		const content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+		
+		await this.app.vault.create(finalPath, content);
+	}
+
+	private createFrontmatterContent(frontmatter: Record<string, any>): string {
+		const lines = ['---'];
+		for (const [key, value] of Object.entries(frontmatter)) {
+			lines.push(`${key}: "${value}"`);
+		}
+		lines.push('---');
+		return lines.join('\n');
 	}
 
 	private updateFrontmatterProperty(content: string, property: string, value: string): string {

@@ -1,5 +1,5 @@
-import { ItemView, WorkspaceLeaf, Menu, TFile } from 'obsidian';
-import { KanbanCard } from './types';
+import { ItemView, WorkspaceLeaf, Menu, TFile, Modal, TextComponent, Setting, App } from 'obsidian';
+import { KanbanCard, BoardConfig } from './types';
 import { DataManager } from './dataManager';
 import KanbanPlugin from './main';
 
@@ -10,10 +10,18 @@ export class KanbanView extends ItemView {
 	private cards: KanbanCard[] = [];
 	private columns: string[] = [];
 	private draggedCard: HTMLElement | null = null;
+	private currentBoard: BoardConfig | null = null;
 
 	constructor(leaf: WorkspaceLeaf, private plugin: KanbanPlugin) {
 		super(leaf);
-		this.dataManager = new DataManager(this.app, this.plugin.settings);
+		this.updateCurrentBoard();
+	}
+
+	private updateCurrentBoard() {
+		this.currentBoard = this.plugin.boardManager.getBoard(this.plugin.settings.activeBoard);
+		if (this.currentBoard) {
+			this.dataManager = new DataManager(this.app, this.currentBoard);
+		}
 	}
 
 	getViewType(): string {
@@ -21,7 +29,7 @@ export class KanbanView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Kanban Board';
+		return this.currentBoard ? `Kanban: ${this.currentBoard.name}` : 'Kanban Board';
 	}
 
 	getIcon(): string {
@@ -33,6 +41,9 @@ export class KanbanView extends ItemView {
 	}
 
 	async refresh(): Promise<void> {
+		this.updateCurrentBoard();
+		if (!this.currentBoard || !this.dataManager) return;
+		
 		this.cards = await this.dataManager.getKanbanCards();
 		this.columns = this.dataManager.getColumns(this.cards);
 		this.render();
@@ -41,6 +52,18 @@ export class KanbanView extends ItemView {
 	private render(): void {
 		const container = this.containerEl.children[1];
 		container.empty();
+		
+		if (!this.currentBoard) {
+			container.createDiv({ 
+				text: 'No board selected', 
+				cls: 'kanban-error' 
+			});
+			return;
+		}
+
+		// Board header with controls
+		const header = container.createDiv({ cls: 'kanban-header' });
+		this.createBoardHeader(header);
 		
 		const kanbanContainer = container.createDiv({ cls: 'kanban-board' });
 		
@@ -53,12 +76,73 @@ export class KanbanView extends ItemView {
 		this.addStyles();
 	}
 
+	private createBoardHeader(container: HTMLElement): void {
+		const title = container.createEl('h2', { 
+			text: this.currentBoard?.name || 'Kanban Board',
+			cls: 'kanban-board-title'
+		});
+
+		const controls = container.createDiv({ cls: 'kanban-board-controls' });
+		
+		// Board selector
+		const boardSelect = controls.createEl('select', { cls: 'kanban-board-selector' });
+		const boards = this.plugin.boardManager.getAllBoards();
+		boards.forEach(board => {
+			const option = boardSelect.createEl('option', { 
+				value: board.id, 
+				text: board.name 
+			});
+			if (board.id === this.plugin.settings.activeBoard) {
+				option.selected = true;
+			}
+		});
+
+		boardSelect.addEventListener('change', async (e) => {
+			const target = e.target as HTMLSelectElement;
+			this.plugin.settings.activeBoard = target.value;
+			await this.plugin.saveSettings();
+			await this.refresh();
+		});
+
+		// Refresh button
+		const refreshBtn = controls.createEl('button', { 
+			text: '⟳', 
+			cls: 'kanban-refresh-btn',
+			attr: { title: 'Refresh Board' }
+		});
+		refreshBtn.addEventListener('click', () => this.refresh());
+	}
+
 	private createColumn(container: HTMLElement, columnName: string, cards: KanbanCard[]): void {
 		const column = container.createDiv({ cls: 'kanban-column' });
 		
 		// Column header
 		const header = column.createDiv({ cls: 'kanban-column-header' });
 		const title = header.createSpan({ text: columnName });
+		
+		const headerControls = header.createDiv({ cls: 'kanban-column-controls' });
+		
+		// Add card button
+		const addBtn = headerControls.createEl('button', { 
+			text: '+', 
+			cls: 'kanban-add-card-btn',
+			attr: { title: 'Add new card' }
+		});
+		addBtn.addEventListener('click', () => {
+			new CreateCardModal(this.app, this.dataManager, columnName, () => {
+				this.refresh();
+			}).open();
+		});
+
+		// Column options button
+		const optionsBtn = headerControls.createEl('button', { 
+			text: '⋯', 
+			cls: 'kanban-column-options-btn',
+			attr: { title: 'Column options' }
+		});
+		optionsBtn.addEventListener('click', (e) => {
+			this.showColumnMenu(e, columnName);
+		});
 		
 		if (this.plugin.settings.showFileCount) {
 			const count = header.createSpan({ 
@@ -96,8 +180,8 @@ export class KanbanView extends ItemView {
 			this.draggedCard = null;
 		});
 		
-		// Card title
-		const title = cardEl.createDiv({ cls: 'kanban-card-title', text: card.title });
+		// Card content based on visible properties
+		this.renderCardContent(cardEl, card);
 		
 		// Click to open file
 		cardEl.addEventListener('click', () => {
@@ -109,17 +193,85 @@ export class KanbanView extends ItemView {
 			e.preventDefault();
 			this.showCardContextMenu(e, card);
 		});
+	}
+
+	private renderCardContent(cardEl: HTMLElement, card: KanbanCard): void {
+		if (!this.currentBoard) return;
+
+		const visibleProperties = this.currentBoard.visibleProperties;
 		
-		// Show creation/modification dates if available
-		if (card.created || card.modified) {
-			const meta = cardEl.createDiv({ cls: 'kanban-card-meta' });
-			if (card.created) {
-				meta.createSpan({ 
-					cls: 'kanban-card-date',
-					text: `Created: ${new Date(card.created).toLocaleDateString()}`
-				});
+		// Always show title
+		if (visibleProperties.includes('title')) {
+			const title = cardEl.createDiv({ cls: 'kanban-card-title', text: card.title });
+		}
+
+		// Show other properties if configured
+		const meta = cardEl.createDiv({ cls: 'kanban-card-meta' });
+		
+		if (visibleProperties.includes('created') && card.created) {
+			meta.createSpan({ 
+				cls: 'kanban-card-date',
+				text: `Created: ${new Date(card.created).toLocaleDateString()}`
+			});
+		}
+
+		if (visibleProperties.includes('modified') && card.modified) {
+			meta.createSpan({ 
+				cls: 'kanban-card-date',
+				text: `Modified: ${new Date(card.modified).toLocaleDateString()}`
+			});
+		}
+
+		if (visibleProperties.includes('tags') && card.frontmatter.tags) {
+			const tags = Array.isArray(card.frontmatter.tags) ? card.frontmatter.tags : [card.frontmatter.tags];
+			if (tags.length > 0) {
+				const tagsEl = meta.createSpan({ cls: 'kanban-card-tags' });
+				tagsEl.textContent = `Tags: ${tags.join(', ')}`;
 			}
 		}
+
+		// Show custom frontmatter properties
+		visibleProperties.forEach(prop => {
+			if (!['title', 'created', 'modified', 'tags'].includes(prop) && card.frontmatter[prop]) {
+				meta.createSpan({ 
+					cls: 'kanban-card-property',
+					text: `${prop}: ${card.frontmatter[prop]}`
+				});
+			}
+		});
+	}
+
+	private showColumnMenu(event: MouseEvent, columnName: string): void {
+		const menu = new Menu();
+		
+		// Only show delete option for custom columns
+		if (this.currentBoard?.customColumns.includes(columnName)) {
+			menu.addItem((item) => {
+				item.setTitle('Delete Column')
+					.setIcon('trash')
+					.onClick(async () => {
+						const success = this.plugin.boardManager.removeColumnFromBoard(this.currentBoard!.id, columnName);
+						if (success) {
+							await this.plugin.saveSettings();
+							await this.refresh();
+						}
+					});
+			});
+		}
+
+		menu.addSeparator();
+
+		menu.addItem((item) => {
+			item.setTitle('Add New Column')
+				.setIcon('plus')
+				.onClick(() => {
+					new AddColumnModal(this.app, this.plugin, this.currentBoard!.id, () => {
+						this.refresh();
+					}).open();
+				});
+		});
+		
+		menu.showAtMouseEvent(event);
 	}
 
 	private makeDroppable(element: HTMLElement, columnName: string): void {
@@ -201,12 +353,52 @@ export class KanbanView extends ItemView {
 			const style = document.createElement('style');
 			style.id = 'kanban-board-styles';
 			style.textContent = `
+				.kanban-header {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					padding: 16px;
+					border-bottom: 1px solid var(--background-modifier-border);
+				}
+				
+				.kanban-board-title {
+					margin: 0;
+					color: var(--text-normal);
+				}
+				
+				.kanban-board-controls {
+					display: flex;
+					gap: 8px;
+					align-items: center;
+				}
+				
+				.kanban-board-selector {
+					padding: 4px 8px;
+					border: 1px solid var(--background-modifier-border);
+					border-radius: 4px;
+					background: var(--background-primary);
+					color: var(--text-normal);
+				}
+				
+				.kanban-refresh-btn {
+					padding: 4px 8px;
+					border: 1px solid var(--background-modifier-border);
+					border-radius: 4px;
+					background: var(--background-primary);
+					color: var(--text-normal);
+					cursor: pointer;
+				}
+				
+				.kanban-refresh-btn:hover {
+					background: var(--background-modifier-hover);
+				}
+				
 				.kanban-board {
 					display: flex;
 					gap: 16px;
 					padding: 16px;
 					overflow-x: auto;
-					height: 100%;
+					height: calc(100% - 80px);
 				}
 				
 				.kanban-column {
@@ -223,6 +415,26 @@ export class KanbanView extends ItemView {
 					display: flex;
 					align-items: center;
 					justify-content: space-between;
+				}
+				
+				.kanban-column-controls {
+					display: flex;
+					gap: 4px;
+				}
+				
+				.kanban-add-card-btn, .kanban-column-options-btn {
+					background: none;
+					border: none;
+					color: var(--text-muted);
+					cursor: pointer;
+					padding: 2px 6px;
+					border-radius: 3px;
+					font-size: 14px;
+				}
+				
+				.kanban-add-card-btn:hover, .kanban-column-options-btn:hover {
+					background: var(--background-modifier-hover);
+					color: var(--text-normal);
 				}
 				
 				.kanban-column-count {
@@ -270,11 +482,96 @@ export class KanbanView extends ItemView {
 					color: var(--text-muted);
 				}
 				
-				.kanban-card-date {
+				.kanban-card-date, .kanban-card-tags, .kanban-card-property {
 					display: block;
+					margin-bottom: 2px;
+				}
+				
+				.kanban-error {
+					padding: 20px;
+					text-align: center;
+					color: var(--text-muted);
 				}
 			`;
 			document.head.appendChild(style);
 		}
+	}
+}
+
+class CreateCardModal extends Modal {
+	private titleInput: TextComponent;
+
+	constructor(app: App, private dataManager: DataManager, private columnName: string, private onSubmit: () => void) {
+		super(app);
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: `Create New Card in "${this.columnName}"` });
+
+		new Setting(contentEl)
+			.setName('Card Title')
+			.addText(text => {
+				this.titleInput = text;
+				text.setPlaceholder('Enter card title...');
+			});
+
+		new Setting(contentEl)
+			.addButton(button => button
+				.setButtonText('Create')
+				.setCta()
+				.onClick(async () => {
+					const title = this.titleInput.getValue().trim();
+					
+					if (title) {
+						await this.dataManager.createNewCard(this.columnName, title);
+						this.close();
+						this.onSubmit();
+					}
+				}))
+			.addButton(button => button
+				.setButtonText('Cancel')
+				.onClick(() => this.close()));
+	}
+}
+
+class AddColumnModal extends Modal {
+	private columnInput: TextComponent;
+
+	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
+		super(app);
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Add Custom Column' });
+
+		new Setting(contentEl)
+			.setName('Column Name')
+			.addText(text => {
+				this.columnInput = text;
+				text.setPlaceholder('New Column');
+			});
+
+		new Setting(contentEl)
+			.addButton(button => button
+				.setButtonText('Add')
+				.setCta()
+				.onClick(async () => {
+					const columnName = this.columnInput.getValue().trim();
+					
+					if (columnName) {
+						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
+						if (success) {
+							await this.plugin.saveSettings();
+							this.plugin.refreshAllViews();
+							this.close();
+							this.onSubmit();
+						}
+					}
+				}))
+			.addButton(button => button
+				.setButtonText('Cancel')
+				.onClick(() => this.close()));
 	}
 }

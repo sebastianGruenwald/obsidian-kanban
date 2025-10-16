@@ -1,14 +1,17 @@
 import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
-import { KanbanSettings, DEFAULT_SETTINGS } from './types';
+import { KanbanSettings, DEFAULT_SETTINGS, BoardConfig } from './types';
 import { KanbanSettingTab } from './settings';
 import { KanbanView, VIEW_TYPE_KANBAN } from './kanbanView';
+import { BoardManager } from './boardManager';
 
 export default class KanbanPlugin extends Plugin {
 	settings: KanbanSettings;
+	boardManager: BoardManager;
 	private views: KanbanView[] = [];
 
 	async onload() {
 		await this.loadSettings();
+		this.boardManager = new BoardManager(this.settings.boards);
 
 		// Register the kanban view
 		this.registerView(
@@ -25,12 +28,21 @@ export default class KanbanPlugin extends Plugin {
 			this.activateView();
 		});
 
-		// Add command
+		// Add command to open kanban board
 		this.addCommand({
 			id: 'open-kanban-board',
 			name: 'Open Kanban Board',
 			callback: () => {
 				this.activateView();
+			}
+		});
+
+		// Add command to switch boards
+		this.addCommand({
+			id: 'switch-kanban-board',
+			name: 'Switch Kanban Board',
+			callback: () => {
+				this.showBoardSwitcher();
 			}
 		});
 
@@ -40,6 +52,15 @@ export default class KanbanPlugin extends Plugin {
 			name: 'Refresh Kanban Board',
 			callback: () => {
 				this.refreshAllViews();
+			}
+		});
+
+		// Add command to create new board
+		this.addCommand({
+			id: 'create-kanban-board',
+			name: 'Create New Kanban Board',
+			callback: () => {
+				this.createNewBoard();
 			}
 		});
 
@@ -87,10 +108,23 @@ export default class KanbanPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loadedData = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+		
+		// Ensure we have at least one board
+		if (!this.settings.boards || this.settings.boards.length === 0) {
+			this.settings.boards = [DEFAULT_SETTINGS.boards[0]];
+		}
+		
+		// Ensure active board exists
+		if (!this.settings.activeBoard || !this.settings.boards.find(b => b.id === this.settings.activeBoard)) {
+			this.settings.activeBoard = this.settings.boards[0].id;
+		}
 	}
 
 	async saveSettings() {
+		// Update the board manager's boards with current settings
+		this.settings.boards = this.boardManager.getAllBoards();
 		await this.saveData(this.settings);
 	}
 
@@ -123,14 +157,35 @@ export default class KanbanPlugin extends Plugin {
 		}
 	}
 
-	// Helper method to update column order in settings
-	async updateColumnOrder(columnOrder: string[]) {
-		this.settings.columnOrder = columnOrder;
-		await this.saveSettings();
+	private showBoardSwitcher() {
+		const boards = this.boardManager.getAllBoards();
+		
+		// Create a simple suggester for board switching
+		// This could be enhanced with a proper modal in the future
+		const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
+		new Notice(`Current board: ${currentBoard?.name || 'Unknown'}. Use settings to switch boards.`);
 	}
 
-	// Helper method to get files with the kanban tag
+	private async createNewBoard() {
+		// This could be enhanced with a proper modal
+		// For now, users can create boards through settings
+		new Notice('Use the settings panel to create new boards.');
+	}
+
+	// Helper method to update column order in settings
+	async updateColumnOrder(columnOrder: string[]) {
+		const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
+		if (currentBoard) {
+			this.boardManager.updateBoard(currentBoard.id, { columnOrder });
+			await this.saveSettings();
+		}
+	}
+
+	// Helper method to get files with the current board's tag
 	async getKanbanFiles() {
+		const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
+		if (!currentBoard) return [];
+
 		const files = this.app.vault.getMarkdownFiles();
 		const kanbanFiles = [];
 
@@ -138,7 +193,7 @@ export default class KanbanPlugin extends Plugin {
 			const cache = this.app.metadataCache.getFileCache(file);
 			if (cache) {
 				const tags = this.getAllTags(cache);
-				if (tags.includes(this.settings.tagFilter)) {
+				if (tags.includes(currentBoard.tagFilter)) {
 					kanbanFiles.push(file);
 				}
 			}
