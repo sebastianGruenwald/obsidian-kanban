@@ -1,7 +1,7 @@
 {
 	"id": "kanban-board",
 	"name": "Kanban Board",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"minAppVersion": "0.15.0",
 	"description": "Create multiple kanban boards with swimlanes from notes with specific tags and frontmatter properties. Supports custom columns, configurable card properties, and board-specific settings.",
 	"author": "Your Name",
