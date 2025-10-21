@@ -8,6 +8,7 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run copy-files",
 		"copy-files": "cp main.js deployment/ && cp styles.css deployment/ && cp manifest.json deployment/",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"release": "./release.sh",
 		"test": "echo \"No tests specified\" && exit 0",
 		"lint": "eslint src --ext .ts",
 		"clean": "rm -f main.js main.js.map"
