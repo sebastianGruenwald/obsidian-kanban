@@ -44,7 +44,7 @@
 1. **Clone the repository**
    ```bash
    cd /path/to/your/vault/.obsidian/plugins/
-   git clone https://github.com/yourusername/obsidian-kanban.git kanban-board
+   git clone https://github.com/waschtlgrea/obsidian-kanban.git kanban-board
    cd kanban-board
    ```
 

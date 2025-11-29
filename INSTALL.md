@@ -50,7 +50,7 @@ Make sure these files are in your plugins folder:
 1. **Clone the repository**
    ```bash
    cd /path/to/your/vault/.obsidian/plugins/
-   git clone https://github.com/yourusername/obsidian-kanban.git kanban-board
+   git clone https://github.com/waschtlgrea/obsidian-kanban.git kanban-board
    cd kanban-board
    ```
 
@@ -115,6 +115,6 @@ After installation, verify the plugin is working:
 
 ## Getting Help
 
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/yourusername/obsidian-kanban/issues)
-- **Discussions**: Join conversations in [GitHub Discussions](https://github.com/yourusername/obsidian-kanban/discussions)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/waschtlgrea/obsidian-kanban/issues)
+- **Discussions**: Join conversations in [GitHub Discussions](https://github.com/waschtlgrea/obsidian-kanban/discussions)
 - **Updates**: Watch the repository for notifications about new releases
