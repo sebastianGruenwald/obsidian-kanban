@@ -7,6 +7,7 @@ import { validateBoardName, normalizeTag, showError, showSuccess } from './utils
  * Available card colors for sticky notes theme
  */
 export const CARD_COLORS = [
+	{ name: 'No Color', value: 'none', color: 'transparent' },
 	{ name: 'Yellow', value: 'yellow', color: '#fff9b1' },
 	{ name: 'Pink', value: 'pink', color: '#ffb3ba' },
 	{ name: 'Blue', value: 'blue', color: '#bae1ff' },
@@ -22,10 +23,11 @@ export const CARD_COLORS = [
 ];
 
 /**
- * Get a random card color value
+ * Get a random card color value (excludes 'none')
  */
 export function getRandomCardColor(): string {
-	return CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)].value;
+	const colorOptions = CARD_COLORS.filter(c => c.value !== 'none');
+	return colorOptions[Math.floor(Math.random() * colorOptions.length)].value;
 }
 
 /**
@@ -50,10 +52,18 @@ export class ColorPickerModal extends Modal {
 
 		for (const color of CARD_COLORS) {
 			const colorBtn = colorGrid.createDiv({ cls: 'kanban-color-option' });
-			colorBtn.style.backgroundColor = color.color;
+			
+			if (color.value === 'none') {
+				// Special styling for 'no color' option
+				colorBtn.addClass('no-color');
+				colorBtn.style.background = 'linear-gradient(135deg, var(--background-primary) 45%, var(--background-modifier-border) 45%, var(--background-modifier-border) 55%, var(--background-primary) 55%)';
+			} else {
+				colorBtn.style.backgroundColor = color.color;
+			}
+			
 			colorBtn.setAttribute('title', color.name);
 			
-			if (this.currentColor === color.value) {
+			if (this.currentColor === color.value || (!this.currentColor && color.value === 'none')) {
 				colorBtn.addClass('selected');
 			}
 
@@ -72,7 +82,12 @@ export class ColorPickerModal extends Modal {
 			}
 
 			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				frontmatter['cardColor'] = colorValue;
+				if (colorValue === 'none') {
+					// Remove the cardColor property for 'none'
+					delete frontmatter['cardColor'];
+				} else {
+					frontmatter['cardColor'] = colorValue;
+				}
 			});
 
 			this.onSelect(colorValue);

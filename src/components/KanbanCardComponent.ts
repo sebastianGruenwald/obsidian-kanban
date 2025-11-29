@@ -37,9 +37,10 @@ export class KanbanCardComponent {
 		// Apply card color from frontmatter (only if showCardColors is enabled)
 		if (this.showCardColors) {
 			const cardColor = this.card.frontmatter?.cardColor;
-			if (cardColor) {
+			if (cardColor && cardColor !== 'none') {
 				cardEl.setAttribute('data-card-color', cardColor);
 			}
+			// Cards without cardColor or with 'none' will use default styling
 		}
 
 		cardEl.setAttribute('data-file-path', this.card.file);
@@ -195,7 +196,12 @@ export class KanbanCardComponent {
 						this.card.file,
 						this.card.frontmatter?.cardColor,
 						(newColor) => {
-							this.element.setAttribute('data-card-color', newColor);
+							// Update the card's visual appearance
+							if (newColor === 'none') {
+								this.element.removeAttribute('data-card-color');
+							} else {
+								this.element.setAttribute('data-card-color', newColor);
+							}
 						}
 					).open();
 				});

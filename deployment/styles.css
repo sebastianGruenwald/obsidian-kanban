@@ -232,7 +232,7 @@ settings:
 
 */
 
-:root {
+body {
   /* --- Semantic Colors --- */
   --k-bg-board: var(--background-primary);
   --k-bg-column: var(--background-secondary);
@@ -655,12 +655,6 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
   opacity: 0.6;
 }
 
-/* Sticky notes theme input styling */
-.kanban-board.theme-sticky-notes .kanban-card-title-input {
-  font-family: 'Caveat', cursive;
-  font-size: 1.3rem;
-}
-
 .kanban-card-body {
   display: flex;
   flex-direction: column;
@@ -820,12 +814,47 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
 
 /* ==========================================================================
    THEME: Sticky Notes (Whiteboard)
+   Style Settings adds theme class to body element
    ========================================================================== */
 
-/* Import a handwriting-style font */
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
+/* Load Caveat font - using @font-face for better Obsidian compatibility */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9SIKjYBxPigs.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
-.kanban-board.theme-sticky-notes {
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9SIKjYBxPigs.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9SIKjYBxPigs.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9SIKjYBxPigs.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+body.theme-sticky-notes .kanban-board {
   /* Whiteboard background */
   background-color: #f5f5f0;
   background-image: 
@@ -834,7 +863,7 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
   background-size: 20px 20px;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes {
+body.theme-dark.theme-sticky-notes .kanban-board {
   background-color: #2d2d2d;
   background-image: 
     linear-gradient(rgba(100, 100, 100, 0.3) 1px, transparent 1px),
@@ -842,39 +871,39 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
 }
 
 /* Columns in sticky notes theme - more transparent */
-.kanban-board.theme-sticky-notes .kanban-column {
+body.theme-sticky-notes .kanban-board .kanban-column {
   background: transparent;
   border: none;
   border-radius: 0;
 }
 
-.kanban-board.theme-sticky-notes .kanban-column-header {
+body.theme-sticky-notes .kanban-board .kanban-column-header {
   background: transparent !important;
   border-bottom: 2px solid rgba(0, 0, 0, 0.2);
   padding-bottom: var(--k-space-md);
 }
 
-.kanban-board.theme-sticky-notes .kanban-column-header::before {
+body.theme-sticky-notes .kanban-board .kanban-column-header::before {
   display: none;
 }
 
-.kanban-board.theme-sticky-notes .kanban-column-title {
-  font-family: 'Caveat', cursive;
-  font-size: 1.6rem;
+body.theme-sticky-notes .kanban-board .kanban-column-title {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-column-title) * 1.6);
   font-weight: 600;
   color: #333;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-column-title {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-column-title {
   color: #e0e0e0;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-column-header {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-column-header {
   border-bottom-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Sticky note cards */
-.kanban-board.theme-sticky-notes .kanban-card {
+body.theme-sticky-notes .kanban-board .kanban-card {
   background: #fff9b1;
   border: none;
   border-radius: 2px;
@@ -886,7 +915,7 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
   position: relative;
 }
 
-.kanban-board.theme-sticky-notes .kanban-card::before {
+body.theme-sticky-notes .kanban-board .kanban-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -897,116 +926,116 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
 }
 
 /* Card colors based on data-card-color attribute */
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="yellow"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="yellow"] {
   background: #fff9b1;
   transform: rotate(-0.5deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="pink"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="pink"] {
   background: #ffb3ba;
   transform: rotate(0.5deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="blue"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="blue"] {
   background: #bae1ff;
   transform: rotate(-0.3deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="green"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="green"] {
   background: #baffc9;
   transform: rotate(0.3deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="orange"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="orange"] {
   background: #ffdfba;
   transform: rotate(-0.4deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="purple"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="purple"] {
   background: #e1baff;
   transform: rotate(0.4deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="coral"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="coral"] {
   background: #ffb5a7;
   transform: rotate(-0.2deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="mint"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="mint"] {
   background: #b8f3d4;
   transform: rotate(0.35deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="lavender"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="lavender"] {
   background: #d4c1ec;
   transform: rotate(-0.45deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="peach"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="peach"] {
   background: #ffd7ba;
   transform: rotate(0.25deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="sky"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="sky"] {
   background: #a2d2ff;
   transform: rotate(-0.35deg);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card[data-card-color="lime"] {
+body.theme-sticky-notes .kanban-board .kanban-card[data-card-color="lime"] {
   background: #d4fc79;
   transform: rotate(0.2deg);
 }
 
 /* Dark mode card colors */
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="yellow"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="yellow"] {
   background: #d4c86a;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="pink"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="pink"] {
   background: #c98a8f;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="blue"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="blue"] {
   background: #8ab4d4;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="green"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="green"] {
   background: #8fc99e;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="orange"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="orange"] {
   background: #d4b38a;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="purple"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="purple"] {
   background: #b38ad4;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="coral"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="coral"] {
   background: #c9918a;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="mint"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="mint"] {
   background: #8ac9a8;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="lavender"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="lavender"] {
   background: #a899bc;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="peach"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="peach"] {
   background: #c9ab8a;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="sky"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="sky"] {
   background: #7aa6c9;
 }
 
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card[data-card-color="lime"] {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card[data-card-color="lime"] {
   background: #a8c962;
 }
 
-.kanban-board.theme-sticky-notes .kanban-card:hover {
+body.theme-sticky-notes .kanban-board .kanban-card:hover {
   transform: rotate(0deg) scale(1.02);
   box-shadow: 
     4px 4px 8px rgba(0, 0, 0, 0.2),
@@ -1014,75 +1043,82 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
   z-index: 10;
 }
 
-/* Card content styling for sticky notes */
-.kanban-board.theme-sticky-notes .kanban-card-title {
-  font-family: 'Caveat', cursive;
-  font-size: 1.3rem;
+/* Card content styling for sticky notes - uses Style Settings font sizes with scale factor */
+body.theme-sticky-notes .kanban-board .kanban-card-title {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-card-title) * 1.35);
   font-weight: 500;
   color: #333;
   line-height: 1.2;
 }
 
-.kanban-board.theme-sticky-notes .kanban-card-body {
-  font-family: 'Caveat', cursive;
+body.theme-sticky-notes .kanban-board .kanban-card-body {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-card-body) * 1.35);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card-footer {
-  font-family: 'Caveat', cursive;
-  font-size: 0.95rem;
+body.theme-sticky-notes .kanban-board .kanban-card-footer {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-card-body) * 1.1);
   border-top-color: rgba(0, 0, 0, 0.1);
   color: #555;
 }
 
-.kanban-board.theme-sticky-notes .kanban-card-date {
-  font-family: 'Caveat', cursive;
+body.theme-sticky-notes .kanban-board .kanban-card-date {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card-tag {
-  font-family: 'Caveat', cursive;
-  font-size: 0.9rem;
+body.theme-sticky-notes .kanban-board .kanban-card-tag {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-tag) * 1.3);
   background: rgba(0, 0, 0, 0.1);
   color: #333;
   border-radius: 2px;
 }
 
-.kanban-board.theme-sticky-notes .kanban-card-property {
-  font-family: 'Caveat', cursive;
-  font-size: 0.95rem;
+body.theme-sticky-notes .kanban-board .kanban-card-property {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-card-body) * 1.1);
   background: rgba(0, 0, 0, 0.05);
 }
 
-.kanban-board.theme-sticky-notes .kanban-card-property-key,
-.kanban-board.theme-sticky-notes .kanban-card-property-value {
+body.theme-sticky-notes .kanban-board .kanban-card-property-key,
+body.theme-sticky-notes .kanban-board .kanban-card-property-value {
   color: #333;
 }
 
 /* Placeholder in sticky notes theme */
-.kanban-board.theme-sticky-notes .kanban-card-placeholder {
+body.theme-sticky-notes .kanban-board .kanban-card-placeholder {
   background: rgba(255, 249, 177, 0.5);
   border: 2px dashed #ccc;
   border-radius: 2px;
 }
 
 /* Column count badge */
-.kanban-board.theme-sticky-notes .kanban-column-count {
-  font-family: 'Caveat', cursive;
-  font-size: 1rem;
+body.theme-sticky-notes .kanban-board .kanban-column-count {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-column-title) * 1.0);
   background: transparent;
   color: #666;
 }
 
 /* Buttons in sticky notes theme */
-.kanban-board.theme-sticky-notes .kanban-column-controls button {
+body.theme-sticky-notes .kanban-board .kanban-column-controls button {
   border-radius: 2px;
 }
 
 /* Dark mode adjustments for sticky notes */
-.theme-dark .kanban-board.theme-sticky-notes .kanban-card {
+body.theme-dark.theme-sticky-notes .kanban-board .kanban-card {
   background: #d4c86a;
   box-shadow: 
     2px 2px 6px rgba(0, 0, 0, 0.4),
     0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Sticky notes theme input styling */
+body.theme-sticky-notes .kanban-board .kanban-card-title-input {
+  font-family: var(--kanban-font-family, 'Caveat', cursive);
+  font-size: calc(var(--k-font-card-title) * 1.35);
 }
 
 
@@ -1115,6 +1151,23 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.kanban-color-option.no-color {
+  border: 2px dashed var(--text-muted);
+  box-shadow: none;
+  position: relative;
+}
+
+.kanban-color-option.no-color::after {
+  content: '∅';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
 .kanban-color-option:hover {
   transform: scale(1.1);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -1131,21 +1184,4 @@ body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
 
 .theme-dark .kanban-color-option:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-/* ==========================================================================
-   Per-Board Custom Font Override
-   When set via board settings, overrides Style Settings font
-   ========================================================================== */
-
-.kanban-board.has-custom-font .kanban-card-title,
-.kanban-board.has-custom-font .kanban-card-body,
-.kanban-board.has-custom-font .kanban-card-footer,
-.kanban-board.has-custom-font .kanban-card-tag,
-.kanban-board.has-custom-font .kanban-card-property,
-.kanban-board.has-custom-font .kanban-column-title,
-.kanban-board.has-custom-font .kanban-column-count,
-.kanban-board.has-custom-font .kanban-card-title-input,
-.kanban-board.has-custom-font .kanban-card-date {
-  font-family: var(--kanban-custom-font) !important;
 }

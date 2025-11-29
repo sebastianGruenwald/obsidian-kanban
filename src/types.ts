@@ -14,12 +14,8 @@ export interface BoardConfig {
 	tagColors: Record<string, string>;
 	showColumnBackgrounds: boolean;
 	colorfulHeaders: boolean;
-	theme: KanbanTheme;
 	showCardColors: boolean;
-	themeFonts: Record<KanbanTheme, string>;
 }
-
-export type KanbanTheme = 'default' | 'sticky-notes';
 
 export interface KanbanSettings {
 	boards: BoardConfig[];
@@ -46,12 +42,7 @@ export const DEFAULT_BOARD: BoardConfig = {
 	tagColors: {},
 	showColumnBackgrounds: false,
 	colorfulHeaders: true,
-	theme: 'sticky-notes',
-	showCardColors: true,
-	themeFonts: {
-		'default': '',
-		'sticky-notes': ''
-	}
+	showCardColors: true
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {
