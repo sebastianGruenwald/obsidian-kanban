@@ -154,7 +154,9 @@
    ========================================================================== */
 
 .kanban-column {
-  flex: 0 0 var(--k-column-width);
+  flex: 1 1 0;
+  min-width: 200px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   max-height: 100%;
@@ -391,38 +393,7 @@
   margin-bottom: var(--k-space-md);
 }
 
-/* --- Resize Handle --- */
-.kanban-column-resize-handle {
-    position: absolute;
-    top: 12px;
-    right: -6px;
-    bottom: 12px;
-    width: 12px;
-    cursor: col-resize;
-    z-index: 10;
-    opacity: 0;
-    transition: var(--k-transition-fast);
-}
 
-.kanban-column-resize-handle::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--interactive-accent);
-    border-radius: 2px;
-    transform: translateX(-50%);
-}
-
-.kanban-column:hover .kanban-column-resize-handle {
-    opacity: 0.3;
-}
-
-.kanban-column-resize-handle:hover {
-    opacity: 1;
-}
 
 /* ==========================================================================
    Modals & Settings

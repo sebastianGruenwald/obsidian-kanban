@@ -38,20 +38,7 @@ export class KanbanColumnComponent {
 		const column = this.container.createDiv({ cls: 'kanban-column' });
 		column.setAttribute('data-column-name', this.columnName);
 		
-		// Apply custom width if set
-		if (this.boardConfig.columnWidths && this.boardConfig.columnWidths[this.columnName]) {
-			column.style.flex = `0 1 ${this.boardConfig.columnWidths[this.columnName]}px`;
-		}
-		
 		this.renderHeader(column);
-		
-		// Resize handle
-		const resizeHandle = column.createDiv({ cls: 'kanban-column-resize-handle' });
-		resizeHandle.addEventListener('mousedown', (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.startResizing(e, column);
-		});
 		
 		// Column content
 		const content = column.createDiv({ cls: 'kanban-column-content' });
@@ -141,40 +128,6 @@ export class KanbanColumnComponent {
 		});
 		
 		menu.showAtMouseEvent(event);
-	}
-
-	private startResizing(e: MouseEvent, columnEl: HTMLElement): void {
-		const startX = e.clientX;
-		const startWidth = columnEl.offsetWidth;
-		let animationFrameId: number;
-
-		const onMouseMove = (e: MouseEvent) => {
-			if (animationFrameId) cancelAnimationFrame(animationFrameId);
-
-			animationFrameId = requestAnimationFrame(() => {
-				const diff = e.clientX - startX;
-				const newWidth = Math.max(200, startWidth + diff);
-				
-				columnEl.style.flex = `0 0 ${newWidth}px`;
-				columnEl.style.width = `${newWidth}px`;
-			});
-		};
-
-		const onMouseUp = () => {
-			if (animationFrameId) cancelAnimationFrame(animationFrameId);
-
-			const style = window.getComputedStyle(columnEl);
-			const flexBasis = style.flexBasis;
-			const finalWidth = flexBasis !== 'auto' ? parseInt(flexBasis) : columnEl.offsetWidth;
-			
-			this.callbacks.onColumnResize(finalWidth);
-			
-			document.removeEventListener('mousemove', onMouseMove);
-			document.removeEventListener('mouseup', onMouseUp);
-		};
-
-		document.addEventListener('mousemove', onMouseMove);
-		document.addEventListener('mouseup', onMouseUp);
 	}
 
 	private makeDroppable(element: HTMLElement): void {

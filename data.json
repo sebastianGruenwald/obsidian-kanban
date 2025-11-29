@@ -12,9 +12,9 @@
       ],
       "customColumns": [],
       "columnWidths": {
-        "To Do": 279,
-        "In Progress": 285,
-        "Done": 519,
+        "To Do": 776,
+        "In Progress": 660,
+        "Done": 272,
         "blocked": 354
       },
       "columnOrder": [
@@ -32,7 +32,7 @@
       "sortOrder": "desc",
       "cardDensity": "comfortable",
       "showColumnBackgrounds": false,
-      "colorfulHeaders": true
+      "colorfulHeaders": false
     }
   ],
   "activeBoard": "default",
