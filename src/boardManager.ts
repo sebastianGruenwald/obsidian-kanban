@@ -1,7 +1,13 @@
 import { BoardConfig, DEFAULT_BOARD } from './types';
+import { generateId, validateBoardName } from './utils';
 
 export class BoardManager {
-	constructor(private boards: BoardConfig[]) {}
+	constructor(private boards: BoardConfig[]) {
+		// Ensure boards is always an array
+		if (!Array.isArray(this.boards)) {
+			this.boards = [DEFAULT_BOARD];
+		}
+	}
 
 	getBoard(boardId: string): BoardConfig | null {
 		return this.boards.find(board => board.id === boardId) || null;
@@ -12,6 +18,17 @@ export class BoardManager {
 	}
 
 	addBoard(board: BoardConfig): void {
+		// Validate board before adding
+		const validation = validateBoardName(board.name);
+		if (!validation.valid) {
+			throw new Error(validation.error || 'Invalid board name');
+		}
+		
+		// Check for duplicate IDs
+		if (this.boards.some(b => b.id === board.id)) {
+			throw new Error('Board with this ID already exists');
+		}
+		
 		this.boards.push(board);
 	}
 
@@ -33,7 +50,12 @@ export class BoardManager {
 
 	addColumnToBoard(boardId: string, columnName: string): boolean {
 		const board = this.getBoard(boardId);
-		if (!board || board.customColumns.includes(columnName)) return false;
+		if (!board) return false;
+		
+		// Check if column already exists
+		if (board.customColumns.includes(columnName) || board.defaultColumns.includes(columnName)) {
+			return false;
+		}
 
 		board.customColumns.push(columnName);
 		return true;
@@ -67,7 +89,14 @@ export class BoardManager {
 	}
 
 	createNewBoard(name: string, tagFilter: string): BoardConfig {
-		const id = this.generateBoardId(name);
+		const validation = validateBoardName(name);
+		if (!validation.valid) {
+			throw new Error(validation.error || 'Invalid board name');
+		}
+		
+		const existingIds = this.boards.map(b => b.id);
+		const id = generateId(name, existingIds);
+		
 		return {
 			...DEFAULT_BOARD,
 			id,
@@ -77,16 +106,8 @@ export class BoardManager {
 	}
 
 	private generateBoardId(name: string): string {
-		const baseId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-		let id = baseId;
-		let counter = 1;
-
-		while (this.boards.some(board => board.id === id)) {
-			id = `${baseId}_${counter}`;
-			counter++;
-		}
-
-		return id;
+		const existingIds = this.boards.map(b => b.id);
+		return generateId(name, existingIds);
 	}
 
 	getBoardsForTag(tag: string): BoardConfig[] {

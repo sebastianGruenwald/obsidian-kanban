@@ -1,12 +1,14 @@
-import { ItemView, WorkspaceLeaf, Menu, TFile, Modal, TextComponent, Setting, App } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Menu, TFile } from 'obsidian';
 import { KanbanCard, BoardConfig } from './types';
 import { DataManager } from './dataManager';
 import KanbanPlugin from './main';
+import { CreateCardModal, AddColumnModal, RenameColumnModal } from './modals';
+import { VIEW_TYPE_KANBAN } from './constants';
 
-export const VIEW_TYPE_KANBAN = 'kanban-board-view';
+export { VIEW_TYPE_KANBAN };
 
 export class KanbanView extends ItemView {
-	private dataManager: DataManager;
+	private dataManager!: DataManager;
 	private cards: KanbanCard[] = [];
 	private columns: string[] = [];
 	private draggedCard: HTMLElement | null = null;
@@ -72,12 +74,10 @@ export class KanbanView extends ItemView {
 			const columnCards = this.cards.filter(card => card.column === columnName);
 			this.createColumn(kanbanContainer, columnName, columnCards);
 		}
-		
-		this.addStyles();
 	}
 
 	private createBoardHeader(container: HTMLElement): void {
-		const title = container.createEl('h2', { 
+		container.createEl('h2', { 
 			text: this.currentBoard?.name || 'Kanban Board',
 			cls: 'kanban-board-title'
 		});
@@ -225,8 +225,8 @@ export class KanbanView extends ItemView {
 		});
 		
 		const titleContainer = header.createDiv({ cls: 'kanban-column-title-container' });
-		const title = titleContainer.createSpan({ text: columnName, cls: 'kanban-column-title' });
-		const dragHandle = titleContainer.createSpan({ text: '⋮⋮', cls: 'kanban-column-drag-handle' });
+		titleContainer.createSpan({ text: columnName, cls: 'kanban-column-title' });
+		titleContainer.createSpan({ text: '⋮⋮', cls: 'kanban-column-drag-handle' });
 		
 		const headerControls = header.createDiv({ cls: 'kanban-column-controls' });
 		
@@ -253,7 +253,7 @@ export class KanbanView extends ItemView {
 		});
 		
 		if (this.plugin.settings.showFileCount) {
-			const count = header.createSpan({ 
+			header.createSpan({ 
 				cls: 'kanban-column-count',
 				text: ` (${cards.length})`
 			});
@@ -310,7 +310,7 @@ export class KanbanView extends ItemView {
 		
 		// Always show title
 		if (visibleProperties.includes('title')) {
-			const title = cardEl.createDiv({ cls: 'kanban-card-title', text: card.title });
+			cardEl.createDiv({ cls: 'kanban-card-title', text: card.title });
 		}
 
 		// Show other properties if configured
@@ -477,298 +477,5 @@ export class KanbanView extends ItemView {
 		}
 		
 		menu.showAtMouseEvent(event);
-	}
-
-	private addStyles(): void {
-		// Add CSS styles if they don't exist
-		if (!document.getElementById('kanban-board-styles')) {
-			const style = document.createElement('style');
-			style.id = 'kanban-board-styles';
-			style.textContent = `
-				.kanban-header {
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					padding: 16px;
-					border-bottom: 1px solid var(--background-modifier-border);
-				}
-				
-				.kanban-board-title {
-					margin: 0;
-					color: var(--text-normal);
-				}
-				
-				.kanban-board-controls {
-					display: flex;
-					gap: 8px;
-					align-items: center;
-				}
-				
-				.kanban-board-selector {
-					padding: 4px 8px;
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 4px;
-					background: var(--background-primary);
-					color: var(--text-normal);
-				}
-				
-				.kanban-refresh-btn {
-					padding: 4px 8px;
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 4px;
-					background: var(--background-primary);
-					color: var(--text-normal);
-					cursor: pointer;
-				}
-				
-				.kanban-refresh-btn:hover {
-					background: var(--background-modifier-hover);
-				}
-				
-				.kanban-board {
-					display: flex;
-					gap: 16px;
-					padding: 16px;
-					overflow-x: auto;
-					height: calc(100% - 80px);
-				}
-				
-				.kanban-column {
-					min-width: 280px;
-					background: var(--background-secondary);
-					border-radius: 8px;
-					flex-shrink: 0;
-				}
-				
-				.kanban-column-header {
-					padding: 12px 16px;
-					border-bottom: 1px solid var(--background-modifier-border);
-					font-weight: 600;
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-				}
-				
-				.kanban-column-controls {
-					display: flex;
-					gap: 4px;
-				}
-				
-				.kanban-add-card-btn, .kanban-column-options-btn {
-					background: none;
-					border: none;
-					color: var(--text-muted);
-					cursor: pointer;
-					padding: 2px 6px;
-					border-radius: 3px;
-					font-size: 14px;
-				}
-				
-				.kanban-add-card-btn:hover, .kanban-column-options-btn:hover {
-					background: var(--background-modifier-hover);
-					color: var(--text-normal);
-				}
-				
-				.kanban-column-count {
-					color: var(--text-muted);
-					font-size: 0.9em;
-				}
-				
-				.kanban-column-content {
-					padding: 8px;
-					min-height: 200px;
-				}
-				
-				.kanban-column-content.drag-over {
-					background: var(--background-modifier-hover);
-				}
-				
-				.kanban-card {
-					background: var(--background-primary);
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 6px;
-					padding: 12px;
-					margin-bottom: 8px;
-					cursor: pointer;
-					transition: all 0.2s ease;
-				}
-				
-				.kanban-card:hover {
-					border-color: var(--interactive-accent);
-					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-				}
-				
-				.kanban-card.dragging {
-					opacity: 0.5;
-					transform: rotate(5deg);
-				}
-				
-				.kanban-card-title {
-					font-weight: 500;
-					margin-bottom: 8px;
-					word-wrap: break-word;
-				}
-				
-				.kanban-card-meta {
-					font-size: 0.8em;
-					color: var(--text-muted);
-				}
-				
-				.kanban-card-date, .kanban-card-tags, .kanban-card-property {
-					display: block;
-					margin-bottom: 2px;
-				}
-				
-				.kanban-error {
-					padding: 20px;
-					text-align: center;
-					color: var(--text-muted);
-				}
-			`;
-			document.head.appendChild(style);
-		}
-	}
-}
-
-class CreateCardModal extends Modal {
-	private titleInput: TextComponent;
-
-	constructor(app: App, private dataManager: DataManager, private columnName: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: `Create New Card in "${this.columnName}"` });
-
-		new Setting(contentEl)
-			.setName('Card Title')
-			.addText(text => {
-				this.titleInput = text;
-				text.setPlaceholder('Enter card title...');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Create')
-				.setCta()
-				.onClick(async () => {
-					const title = this.titleInput.getValue().trim();
-					
-					if (title) {
-						await this.dataManager.createNewCard(this.columnName, title);
-						this.close();
-						this.onSubmit();
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class AddColumnModal extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Add Custom Column' });
-
-		new Setting(contentEl)
-			.setName('Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder('New Column');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Add')
-				.setCta()
-				.onClick(async () => {
-					const columnName = this.columnInput.getValue().trim();
-					
-					if (columnName) {
-						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.close();
-							this.onSubmit();
-						}
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class RenameColumnModal extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private oldColumnName: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: `Rename Column: ${this.oldColumnName}` });
-
-		new Setting(contentEl)
-			.setName('New Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder(this.oldColumnName);
-				text.setValue(this.oldColumnName);
-				text.inputEl.select();
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Rename')
-				.setCta()
-				.onClick(async () => {
-					const newColumnName = this.columnInput.getValue().trim();
-					
-					if (newColumnName && newColumnName !== this.oldColumnName) {
-						const board = this.plugin.boardManager.getBoard(this.boardId);
-						if (!board) return;
-
-						// Handle renaming for default columns
-						if (board.defaultColumns.includes(this.oldColumnName)) {
-							const newDefaultColumns = board.defaultColumns.map(col => 
-								col === this.oldColumnName ? newColumnName : col
-							);
-							this.plugin.boardManager.updateBoard(this.boardId, { defaultColumns: newDefaultColumns });
-						}
-						
-						// Handle renaming for custom columns
-						if (board.customColumns.includes(this.oldColumnName)) {
-							this.plugin.boardManager.removeColumnFromBoard(this.boardId, this.oldColumnName);
-							this.plugin.boardManager.addColumnToBoard(this.boardId, newColumnName);
-						}
-
-						// Update column order if it exists
-						if (board.columnOrder.includes(this.oldColumnName)) {
-							const newOrder = board.columnOrder.map(col => 
-								col === this.oldColumnName ? newColumnName : col
-							);
-							this.plugin.boardManager.updateColumnOrder(this.boardId, newOrder);
-						}
-
-						await this.plugin.saveSettings();
-						this.plugin.refreshAllViews();
-						this.close();
-						this.onSubmit();
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
 	}
 }

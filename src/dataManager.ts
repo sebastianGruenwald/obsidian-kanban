@@ -1,70 +1,62 @@
-import { TFile, FrontMatterCache, CachedMetadata } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { KanbanCard, BoardConfig } from './types';
+import { getAllTags, sanitizeFileName, showError } from './utils';
+import { DEFAULTS } from './constants';
 
 export class DataManager {
-	constructor(private app: any, private boardConfig: BoardConfig) {}
+	constructor(private app: App, private boardConfig: BoardConfig) {}
 
 	async getKanbanCards(): Promise<KanbanCard[]> {
-		const files = this.app.vault.getMarkdownFiles();
-		const cards: KanbanCard[] = [];
+		try {
+			const files = this.app.vault.getMarkdownFiles();
+			const cards: KanbanCard[] = [];
 
-		for (const file of files) {
-			if (await this.shouldIncludeFile(file)) {
-				const card = await this.createCardFromFile(file);
-				if (card) {
-					cards.push(card);
+			for (const file of files) {
+				if (await this.shouldIncludeFile(file)) {
+					const card = await this.createCardFromFile(file);
+					if (card) {
+						cards.push(card);
+					}
 				}
 			}
-		}
 
-		return this.sortCards(cards);
+			return this.sortCards(cards);
+		} catch (error) {
+			console.error('Error getting kanban cards:', error);
+			showError('Failed to load kanban cards');
+			return [];
+		}
 	}
 
 	private async shouldIncludeFile(file: TFile): Promise<boolean> {
 		const cache = this.app.metadataCache.getFileCache(file);
 		
 		// Check if file has the required tag
-		const tags = this.getAllTags(cache);
+		const tags = getAllTags(cache);
 		return tags.includes(this.boardConfig.tagFilter);
 	}
 
-	private getAllTags(cache: CachedMetadata | null): string[] {
-		if (!cache) return [];
-		
-		const tags: string[] = [];
-		
-		// Get tags from frontmatter
-		if (cache.frontmatter?.tags) {
-			const frontmatterTags = Array.isArray(cache.frontmatter.tags) 
-				? cache.frontmatter.tags 
-				: [cache.frontmatter.tags];
-			tags.push(...frontmatterTags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`));
-		}
-		
-		// Get tags from content
-		if (cache.tags) {
-			tags.push(...cache.tags.map(tagCache => tagCache.tag));
-		}
-		
-		return tags;
-	}
-
 	private async createCardFromFile(file: TFile): Promise<KanbanCard | null> {
-		const cache = this.app.metadataCache.getFileCache(file);
-		const content = await this.app.vault.read(file);
-		
-		const frontmatter = cache?.frontmatter || {};
-		const column = frontmatter[this.boardConfig.columnProperty] || 'Uncategorized';
-		
-		return {
-			file: file.path,
-			title: file.basename,
-			column: column,
-			created: file.stat.ctime,
-			modified: file.stat.mtime,
-			content: content,
-			frontmatter: frontmatter
-		};
+		try {
+			const cache = this.app.metadataCache.getFileCache(file);
+			const content = await this.app.vault.read(file);
+			
+			const frontmatter = cache?.frontmatter || {};
+			const column = frontmatter[this.boardConfig.columnProperty] || DEFAULTS.UNCATEGORIZED_COLUMN;
+			
+			return {
+				file: file.path,
+				title: file.basename,
+				column: column,
+				created: file.stat.ctime,
+				modified: file.stat.mtime,
+				content: content,
+				frontmatter: frontmatter
+			};
+		} catch (error) {
+			console.error(`Error creating card from file ${file.path}:`, error);
+			return null;
+		}
 	}
 
 	private sortCards(cards: KanbanCard[]): KanbanCard[] {
@@ -106,35 +98,55 @@ export class DataManager {
 	}
 
 	async updateCardColumn(cardPath: string, newColumn: string): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(cardPath);
-		if (!(file instanceof TFile)) return;
+		try {
+			const file = this.app.vault.getAbstractFileByPath(cardPath);
+			if (!(file instanceof TFile)) {
+				throw new Error('File not found');
+			}
 
-		const content = await this.app.vault.read(file);
-		const updatedContent = this.updateFrontmatterProperty(content, this.boardConfig.columnProperty, newColumn);
-		
-		await this.app.vault.modify(file, updatedContent);
+			const content = await this.app.vault.read(file);
+			const updatedContent = this.updateFrontmatterProperty(content, this.boardConfig.columnProperty, newColumn);
+			
+			await this.app.vault.modify(file, updatedContent);
+		} catch (error) {
+			console.error('Error updating card column:', error);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			showError(`Failed to move card: ${message}`);
+			throw error;
+		}
 	}
 
 	async createNewCard(columnName: string, title: string): Promise<void> {
-		const fileName = `${title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim()}.md`;
-		const filePath = `${fileName}`;
-		
-		// Check if file already exists, if so, add a number
-		let finalPath = filePath;
-		let counter = 1;
-		while (this.app.vault.getAbstractFileByPath(finalPath)) {
-			const nameWithoutExt = fileName.replace('.md', '');
-			finalPath = `${nameWithoutExt} ${counter}.md`;
-			counter++;
+		try {
+			const sanitizedTitle = sanitizeFileName(title);
+			if (!sanitizedTitle) {
+				throw new Error('Invalid card title');
+			}
+			
+			const fileName = `${sanitizedTitle}.md`;
+			let filePath = fileName;
+			
+			// Check if file already exists, if so, add a number
+			let counter = 1;
+			while (this.app.vault.getAbstractFileByPath(filePath)) {
+				const nameWithoutExt = fileName.replace('.md', '');
+				filePath = `${nameWithoutExt} ${counter}.md`;
+				counter++;
+			}
+
+			const frontmatter = {
+				[this.boardConfig.columnProperty]: columnName
+			};
+
+			const content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+			
+			await this.app.vault.create(filePath, content);
+		} catch (error) {
+			console.error('Error creating new card:', error);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			showError(`Failed to create card: ${message}`);
+			throw error;
 		}
-
-		const frontmatter = {
-			[this.boardConfig.columnProperty]: columnName
-		};
-
-		const content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
-		
-		await this.app.vault.create(finalPath, content);
 	}
 
 	private createFrontmatterContent(frontmatter: Record<string, any>): string {

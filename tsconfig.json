@@ -7,7 +7,7 @@
 		],
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
-		"strict": false,
+		"strict": true,
 		"module": "CommonJS",
 		"moduleResolution": "node",
 		"resolveJsonModule": true,
@@ -19,7 +19,13 @@
 		"inlineSourceMap": true,
 		"inlineSources": true,
 		"outDir": "./",
-		"noImplicitAny": false
+		"noImplicitAny": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": true,
+		"noImplicitThis": true,
+		"alwaysStrict": true
 	},
 	"include": [
 		"src/**/*"

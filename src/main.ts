@@ -1,36 +1,67 @@
-import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
-import { KanbanSettings, DEFAULT_SETTINGS, BoardConfig } from './types';
+import { Plugin, WorkspaceLeaf, TFile } from 'obsidian';
+import { KanbanSettings, DEFAULT_SETTINGS } from './types';
 import { KanbanSettingTab } from './settings';
 import { KanbanView, VIEW_TYPE_KANBAN } from './kanbanView';
 import { BoardManager } from './boardManager';
+import { debounce, getAllTags, showError, showInfo } from './utils';
+import { DEFAULTS, KEYBOARD_SHORTCUTS, ICONS } from './constants';
 
 export default class KanbanPlugin extends Plugin {
-	settings: KanbanSettings;
-	boardManager: BoardManager;
-	private views: KanbanView[] = [];
+	settings!: KanbanSettings;
+	boardManager!: BoardManager;
+	private views: Set<KanbanView> = new Set();
+	private debouncedRefresh!: () => void;
 
 	async onload() {
 		await this.loadSettings();
 		this.boardManager = new BoardManager(this.settings.boards);
+
+		// Initialize debounced refresh
+		this.debouncedRefresh = debounce(
+			() => this.refreshAllViews(),
+			DEFAULTS.DEBOUNCE_DELAY
+		);
 
 		// Register the kanban view
 		this.registerView(
 			VIEW_TYPE_KANBAN,
 			(leaf) => {
 				const view = new KanbanView(leaf, this);
-				this.views.push(view);
+				this.views.add(view);
+				
+				// Clean up when view is closed
+				this.registerEvent(
+					this.app.workspace.on('layout-change', () => {
+						// Remove views that are no longer in the workspace
+						const activeViews = new Set<KanbanView>();
+						this.app.workspace.getLeavesOfType(VIEW_TYPE_KANBAN).forEach(leaf => {
+							const view = leaf.view;
+							if (view instanceof KanbanView) {
+								activeViews.add(view);
+							}
+						});
+						
+						// Remove views that are no longer active
+						this.views.forEach(view => {
+							if (!activeViews.has(view)) {
+								this.views.delete(view);
+							}
+						});
+					})
+				);
+				
 				return view;
 			}
 		);
 
 		// Add ribbon icon
-		this.addRibbonIcon('layout-dashboard', 'Open Kanban Board', () => {
+		this.addRibbonIcon(ICONS.KANBAN, 'Open Kanban Board', () => {
 			this.activateView();
 		});
 
 		// Add command to open kanban board
 		this.addCommand({
-			id: 'open-kanban-board',
+			id: KEYBOARD_SHORTCUTS.OPEN_KANBAN,
 			name: 'Open Kanban Board',
 			callback: () => {
 				this.activateView();
@@ -39,7 +70,7 @@ export default class KanbanPlugin extends Plugin {
 
 		// Add command to switch boards
 		this.addCommand({
-			id: 'switch-kanban-board',
+			id: KEYBOARD_SHORTCUTS.SWITCH_BOARD,
 			name: 'Switch Kanban Board',
 			callback: () => {
 				this.showBoardSwitcher();
@@ -48,7 +79,7 @@ export default class KanbanPlugin extends Plugin {
 
 		// Add command to refresh kanban board
 		this.addCommand({
-			id: 'refresh-kanban-board',
+			id: KEYBOARD_SHORTCUTS.REFRESH_BOARD,
 			name: 'Refresh Kanban Board',
 			callback: () => {
 				this.refreshAllViews();
@@ -57,10 +88,20 @@ export default class KanbanPlugin extends Plugin {
 
 		// Add command to create new board
 		this.addCommand({
-			id: 'create-kanban-board',
+			id: KEYBOARD_SHORTCUTS.CREATE_BOARD,
 			name: 'Create New Kanban Board',
 			callback: () => {
 				this.createNewBoard();
+			}
+		});
+
+		// Add command to create new card
+		this.addCommand({
+			id: KEYBOARD_SHORTCUTS.CREATE_CARD,
+			name: 'Create New Kanban Card',
+			callback: () => {
+				// This will be handled by the active view
+				showInfo('Open a kanban board and use the + button in a column');
 			}
 		});
 
@@ -70,26 +111,34 @@ export default class KanbanPlugin extends Plugin {
 		// Auto-refresh on file changes
 		if (this.settings.autoRefresh) {
 			this.registerEvent(
-				this.app.vault.on('modify', () => {
-					this.refreshAllViews();
+				this.app.vault.on('modify', (file) => {
+					if (this.isRelevantFile(file)) {
+						this.debouncedRefresh();
+					}
 				})
 			);
 
 			this.registerEvent(
-				this.app.vault.on('create', () => {
-					this.refreshAllViews();
+				this.app.vault.on('create', (file) => {
+					if (this.isRelevantFile(file)) {
+						this.debouncedRefresh();
+					}
 				})
 			);
 
 			this.registerEvent(
-				this.app.vault.on('delete', () => {
-					this.refreshAllViews();
+				this.app.vault.on('delete', (file) => {
+					if (this.isRelevantFile(file)) {
+						this.debouncedRefresh();
+					}
 				})
 			);
 
 			this.registerEvent(
-				this.app.metadataCache.on('changed', () => {
-					this.refreshAllViews();
+				this.app.metadataCache.on('changed', (file) => {
+					if (this.isRelevantFile(file)) {
+						this.debouncedRefresh();
+					}
 				})
 			);
 		}
@@ -98,7 +147,9 @@ export default class KanbanPlugin extends Plugin {
 	}
 
 	onunload() {
-		this.views = [];
+		// Clear all views
+		this.views.clear();
+		
 		// Remove styles
 		const styleEl = document.getElementById('kanban-board-styles');
 		if (styleEl) {
@@ -107,25 +158,54 @@ export default class KanbanPlugin extends Plugin {
 		console.log('Kanban Board plugin unloaded');
 	}
 
-	async loadSettings() {
-		const loadedData = await this.loadData();
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
-		
-		// Ensure we have at least one board
-		if (!this.settings.boards || this.settings.boards.length === 0) {
-			this.settings.boards = [DEFAULT_SETTINGS.boards[0]];
+	/**
+	 * Check if a file is relevant for kanban boards
+	 */
+	private isRelevantFile(file: unknown): file is TFile {
+		if (!(file instanceof TFile) || file.extension !== 'md') {
+			return false;
 		}
+
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache) return false;
+
+		const tags = getAllTags(cache);
 		
-		// Ensure active board exists
-		if (!this.settings.activeBoard || !this.settings.boards.find(b => b.id === this.settings.activeBoard)) {
-			this.settings.activeBoard = this.settings.boards[0].id;
+		// Check if file has any of the board tags
+		const boards = this.boardManager.getAllBoards();
+		return boards.some(board => tags.includes(board.tagFilter));
+	}
+
+	async loadSettings() {
+		try {
+			const loadedData = await this.loadData();
+			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+			
+			// Ensure we have at least one board
+			if (!this.settings.boards || this.settings.boards.length === 0) {
+				this.settings.boards = [DEFAULT_SETTINGS.boards[0]];
+			}
+			
+			// Ensure active board exists
+			if (!this.settings.activeBoard || !this.settings.boards.find(b => b.id === this.settings.activeBoard)) {
+				this.settings.activeBoard = this.settings.boards[0].id;
+			}
+		} catch (error) {
+			console.error('Failed to load settings:', error);
+			this.settings = DEFAULT_SETTINGS;
+			showError('Failed to load settings, using defaults');
 		}
 	}
 
 	async saveSettings() {
-		// Update the board manager's boards with current settings
-		this.settings.boards = this.boardManager.getAllBoards();
-		await this.saveData(this.settings);
+		try {
+			// Update the board manager's boards with current settings
+			this.settings.boards = this.boardManager.getAllBoards();
+			await this.saveData(this.settings);
+		} catch (error) {
+			console.error('Failed to save settings:', error);
+			showError('Failed to save settings');
+		}
 	}
 
 	async activateView() {
@@ -152,72 +232,61 @@ export default class KanbanPlugin extends Plugin {
 	}
 
 	refreshAllViews() {
-		for (const view of this.views) {
+		for (const view of this.views.values()) {
 			view.refresh();
 		}
 	}
 
 	private showBoardSwitcher() {
-		const boards = this.boardManager.getAllBoards();
-		
 		// Create a simple suggester for board switching
 		// This could be enhanced with a proper modal in the future
 		const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
-		new Notice(`Current board: ${currentBoard?.name || 'Unknown'}. Use settings to switch boards.`);
+		showInfo(`Current board: ${currentBoard?.name || 'Unknown'}. Use settings to switch boards.`);
 	}
 
 	private async createNewBoard() {
 		// This could be enhanced with a proper modal
 		// For now, users can create boards through settings
-		new Notice('Use the settings panel to create new boards.');
+		showInfo('Use the settings panel to create new boards.');
 	}
 
 	// Helper method to update column order in settings
 	async updateColumnOrder(columnOrder: string[]) {
-		const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
-		if (currentBoard) {
-			this.boardManager.updateBoard(currentBoard.id, { columnOrder });
-			await this.saveSettings();
+		try {
+			const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
+			if (currentBoard) {
+				this.boardManager.updateBoard(currentBoard.id, { columnOrder });
+				await this.saveSettings();
+			}
+		} catch (error) {
+			console.error('Failed to update column order:', error);
+			showError('Failed to update column order');
 		}
 	}
 
 	// Helper method to get files with the current board's tag
 	async getKanbanFiles() {
-		const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
-		if (!currentBoard) return [];
+		try {
+			const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
+			if (!currentBoard) return [];
 
-		const files = this.app.vault.getMarkdownFiles();
-		const kanbanFiles = [];
+			const files = this.app.vault.getMarkdownFiles();
+			const kanbanFiles = [];
 
-		for (const file of files) {
-			const cache = this.app.metadataCache.getFileCache(file);
-			if (cache) {
-				const tags = this.getAllTags(cache);
-				if (tags.includes(currentBoard.tagFilter)) {
-					kanbanFiles.push(file);
+			for (const file of files) {
+				const cache = this.app.metadataCache.getFileCache(file);
+				if (cache) {
+					const tags = getAllTags(cache);
+					if (tags.includes(currentBoard.tagFilter)) {
+						kanbanFiles.push(file);
+					}
 				}
 			}
-		}
 
-		return kanbanFiles;
-	}
-
-	private getAllTags(cache: any): string[] {
-		const tags: string[] = [];
-		
-		// Get tags from frontmatter
-		if (cache.frontmatter?.tags) {
-			const frontmatterTags = Array.isArray(cache.frontmatter.tags) 
-				? cache.frontmatter.tags 
-				: [cache.frontmatter.tags];
-			tags.push(...frontmatterTags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`));
+			return kanbanFiles;
+		} catch (error) {
+			console.error('Failed to get kanban files:', error);
+			return [];
 		}
-		
-		// Get tags from content
-		if (cache.tags) {
-			tags.push(...cache.tags.map((tagCache: any) => tagCache.tag));
-		}
-		
-		return tags;
 	}
 }

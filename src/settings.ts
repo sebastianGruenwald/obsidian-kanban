@@ -1,6 +1,7 @@
-import { App, PluginSettingTab, Setting, Modal, TextComponent, DropdownComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting } from 'obsidian';
 import KanbanPlugin from './main';
-import { BoardConfig, DEFAULT_BOARD } from './types';
+import { BoardConfig } from './types';
+import { CreateBoardModal, AddColumnModal } from './modals';
 
 export class KanbanSettingTab extends PluginSettingTab {
 	plugin: KanbanPlugin;
@@ -66,7 +67,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 			cls: 'board-settings-toggle'
 		});
 		
-		const headerTitle = headerDiv.createEl('h3', { 
+		headerDiv.createEl('h3', { 
 			text: `${board.name}${board.id === this.plugin.settings.activeBoard ? ' (Active)' : ''}`,
 			cls: 'board-settings-title'
 		});
@@ -224,7 +225,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Add Column')
 				.onClick(() => {
-					new AddColumnModalSettings(this.app, this.plugin, board.name, () => {
+					new AddColumnModal(this.app, this.plugin, board.id, () => {
 						this.display();
 					}).open();
 				}));
@@ -280,133 +281,3 @@ export class KanbanSettingTab extends PluginSettingTab {
 	}
 }
 
-class CreateBoardModal extends Modal {
-	private nameInput: TextComponent;
-	private tagInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Create New Board' });
-
-		new Setting(contentEl)
-			.setName('Board Name')
-			.addText(text => {
-				this.nameInput = text;
-				text.setPlaceholder('My Kanban Board');
-			});
-
-		new Setting(contentEl)
-			.setName('Tag Filter')
-			.addText(text => {
-				this.tagInput = text;
-				text.setPlaceholder('#my-tag');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Create')
-				.setCta()
-				.onClick(async () => {
-					const name = this.nameInput.getValue().trim();
-					const tag = this.tagInput.getValue().trim();
-					
-					if (name && tag) {
-						const newBoard = this.plugin.boardManager.createNewBoard(name, tag);
-						this.plugin.boardManager.addBoard(newBoard);
-						this.plugin.settings.activeBoard = newBoard.id;
-						await this.plugin.saveSettings();
-						this.close();
-						this.onSubmit();
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class AddColumnModal extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Add Custom Column' });
-
-		new Setting(contentEl)
-			.setName('Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder('New Column');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Add')
-				.setCta()
-				.onClick(async () => {
-					const columnName = this.columnInput.getValue().trim();
-					
-					if (columnName) {
-						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.close();
-							this.onSubmit();
-						}
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class AddColumnModalSettings extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Add Custom Column' });
-
-		new Setting(contentEl)
-			.setName('Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder('New Column');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Add')
-				.setCta()
-				.onClick(async () => {
-					const columnName = this.columnInput.getValue().trim();
-					
-					if (columnName) {
-						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.close();
-							this.onSubmit();
-						}
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}

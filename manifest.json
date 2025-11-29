@@ -4,8 +4,8 @@
 	"version": "2.1.6",
 	"minAppVersion": "0.15.0",
 	"description": "Create multiple kanban boards with swimlanes from notes with specific tags and frontmatter properties. Supports custom columns, configurable card properties, and board-specific settings.",
-	"author": "sebastianGruenwald",
+	"author": "Waschtlgrea",
 	"authorUrl": "https://gitlab.com/sebastianGruenwald",
-	"fundingUrl": "https://buymeacoffee.com/your-name",
+	"fundingUrl": "",
 	"isDesktopOnly": false
 }
