@@ -31,6 +31,7 @@ export class KanbanColumnComponent {
 			getDraggedCard: () => HTMLElement | null;
 			getPlaceholder: () => HTMLElement | null;
 			setPlaceholder: (el: HTMLElement | null) => void;
+			onColumnReorder?: (draggedColumn: string, targetColumn: string) => void;
 		}
 	) {
 		this.element = this.render();
@@ -72,9 +73,49 @@ export class KanbanColumnComponent {
 	private renderHeader(column: HTMLElement): void {
 		const header = column.createDiv({ cls: 'kanban-column-header' });
 		
-		// Make header draggable for column reordering (handled by parent view for now to simplify)
+		// Make header draggable for column reordering
 		header.draggable = true;
 		header.setAttribute('data-column-name', this.columnName);
+		
+		// Column drag events
+		header.addEventListener('dragstart', (e) => {
+			e.dataTransfer?.setData('text/column', this.columnName);
+			column.addClass('column-dragging');
+		});
+		
+		header.addEventListener('dragend', () => {
+			column.removeClass('column-dragging');
+			// Remove drag-over from all columns
+			this.container.querySelectorAll('.kanban-column').forEach(col => {
+				col.removeClass('column-drag-over');
+			});
+		});
+		
+		// Column drop zone (the whole column is a drop target)
+		column.addEventListener('dragover', (e) => {
+			const columnData = e.dataTransfer?.types.includes('text/column');
+			if (columnData) {
+				e.preventDefault();
+				column.addClass('column-drag-over');
+			}
+		});
+		
+		column.addEventListener('dragleave', (e) => {
+			if (!column.contains(e.relatedTarget as Node)) {
+				column.removeClass('column-drag-over');
+			}
+		});
+		
+		column.addEventListener('drop', (e) => {
+			const draggedColumn = e.dataTransfer?.getData('text/column');
+			if (draggedColumn && draggedColumn !== this.columnName) {
+				e.preventDefault();
+				column.removeClass('column-drag-over');
+				if (this.callbacks.onColumnReorder) {
+					this.callbacks.onColumnReorder(draggedColumn, this.columnName);
+				}
+			}
+		});
 		
 		const titleContainer = header.createDiv({ cls: 'kanban-column-title-container' });
 		titleContainer.createSpan({ text: this.columnName, cls: 'kanban-column-title' });

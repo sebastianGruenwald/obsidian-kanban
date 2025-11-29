@@ -10,7 +10,9 @@
         "In Progress",
         "Done"
       ],
-      "customColumns": [],
+      "customColumns": [
+        "Blocked"
+      ],
       "columnWidths": {
         "To Do": 776,
         "In Progress": 660,
@@ -28,7 +30,7 @@
         "tags",
         "priority"
       ],
-      "sortBy": "priority",
+      "sortBy": "none",
       "sortOrder": "desc",
       "cardDensity": "comfortable",
       "showColumnBackgrounds": true,

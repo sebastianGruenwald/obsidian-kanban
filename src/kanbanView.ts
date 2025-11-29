@@ -126,6 +126,9 @@ export class KanbanView extends ItemView {
 						await this.plugin.saveSettings();
 						await this.refresh();
 					},
+					onColumnReorder: (draggedColumn, targetColumn) => {
+						this.reorderColumns(draggedColumn, targetColumn);
+					},
 					onColumnResize: async (width) => {
 						if (this.currentBoard) {
 							const columnWidths = this.currentBoard.columnWidths || {};
