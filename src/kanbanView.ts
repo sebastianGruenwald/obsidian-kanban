@@ -16,6 +16,9 @@ export class KanbanView extends ItemView {
 	private placeholder: HTMLElement | null = null;
 	private currentBoard: BoardConfig | null = null;
 	private searchQuery: string = '';
+	private selectedTags: Set<string> = new Set();
+	private tagSearchQuery: string = '';
+	private tagFilterPopup: HTMLElement | null = null;
 	private headerContainer: HTMLElement | null = null;
 	private boardContainer: HTMLElement | null = null;
 
@@ -97,13 +100,24 @@ export class KanbanView extends ItemView {
 			kanbanContainer.removeClass('colorful-headers');
 		}
 		
-		// Filter cards based on search query
-		const filteredCards = this.searchQuery 
-			? this.cards.filter(card => 
+		// Filter cards based on search query and tags
+		const filteredCards = this.cards.filter(card => {
+			const matchesSearch = !this.searchQuery || 
 				card.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-				card.content.toLowerCase().includes(this.searchQuery.toLowerCase())
-			)
-			: this.cards;
+				card.content.toLowerCase().includes(this.searchQuery.toLowerCase());
+			
+			if (!matchesSearch) return false;
+
+			if (this.selectedTags.size === 0) return true;
+
+			const cardTags = card.frontmatter.tags 
+				? (Array.isArray(card.frontmatter.tags) ? card.frontmatter.tags : [card.frontmatter.tags])
+				: [];
+			
+			// Check if card has ANY of the selected tags
+			const cleanCardTags = cardTags.map((t: string) => t.replace('#', ''));
+			return cleanCardTags.some((t: string) => this.selectedTags.has(t));
+		});
 
 		// Create columns
 		for (const columnName of this.columns) {
@@ -278,6 +292,144 @@ export class KanbanView extends ItemView {
 		setIcon(refreshBtn, 'refresh-cw');
 		
 		refreshBtn.addEventListener('click', () => this.refresh());
+
+		// Filter button
+		const filterBtn = controls.createEl('button', {
+			cls: `kanban-filter-btn ${this.selectedTags.size > 0 ? 'is-active' : ''}`,
+			attr: { title: 'Filter Tags' }
+		});
+		setIcon(filterBtn, 'filter');
+		if (this.selectedTags.size > 0) {
+			filterBtn.createSpan({ text: `${this.selectedTags.size}`, cls: 'kanban-filter-count' });
+		}
+
+		filterBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.toggleTagFilter(filterBtn);
+		});
+	}
+
+	private toggleTagFilter(targetBtn: HTMLElement): void {
+		if (this.tagFilterPopup) {
+			this.closeTagFilter();
+			return;
+		}
+
+		this.openTagFilter(targetBtn);
+	}
+
+	private closeTagFilter(): void {
+		if (this.tagFilterPopup) {
+			this.tagFilterPopup.remove();
+			this.tagFilterPopup = null;
+			document.removeEventListener('click', this.handleDocumentClick);
+		}
+	}
+
+	private handleDocumentClick = (e: MouseEvent) => {
+		if (this.tagFilterPopup && !this.tagFilterPopup.contains(e.target as Node)) {
+			this.closeTagFilter();
+		}
+	};
+
+	private openTagFilter(targetBtn: HTMLElement): void {
+		const allTags = this.getAllTags();
+		if (allTags.length === 0) return;
+
+		this.tagFilterPopup = document.body.createDiv({ cls: 'kanban-tag-filter-popup' });
+		
+		// Position the popup
+		const rect = targetBtn.getBoundingClientRect();
+		this.tagFilterPopup.style.top = `${rect.bottom + 5}px`;
+		this.tagFilterPopup.style.left = `${rect.right - 250}px`; // Align right edge roughly
+
+		// Search input
+		const searchContainer = this.tagFilterPopup.createDiv({ cls: 'kanban-tag-filter-search' });
+		const searchInput = new TextComponent(searchContainer);
+		searchInput.setPlaceholder('Search tags...');
+		searchInput.setValue(this.tagSearchQuery);
+		searchInput.onChange((value) => {
+			this.tagSearchQuery = value;
+			this.renderTagList(listContainer, allTags);
+		});
+		
+		// Focus input
+		setTimeout(() => searchInput.inputEl.focus(), 0);
+
+		// Tag list
+		const listContainer = this.tagFilterPopup.createDiv({ cls: 'kanban-tag-filter-list' });
+		this.renderTagList(listContainer, allTags);
+
+		// Close on outside click
+		document.addEventListener('click', this.handleDocumentClick);
+		
+		// Prevent clicks inside popup from closing it
+		this.tagFilterPopup.addEventListener('click', (e) => e.stopPropagation());
+	}
+
+	private renderTagList(container: HTMLElement, allTags: string[]): void {
+		container.empty();
+		
+		const filteredTags = allTags.filter(tag => 
+			tag.toLowerCase().includes(this.tagSearchQuery.toLowerCase())
+		);
+
+		if (filteredTags.length === 0) {
+			container.createDiv({ cls: 'kanban-tag-filter-empty', text: 'No tags found' });
+			return;
+		}
+
+		// "Select All" / "Clear All" helper if searching
+		if (this.tagSearchQuery) {
+			// Optional: Add helper buttons here if needed
+		}
+
+		filteredTags.forEach(tag => {
+			const item = container.createDiv({ cls: 'kanban-tag-filter-item' });
+			const checkbox = item.createEl('input', { 
+				type: 'checkbox',
+				cls: 'kanban-tag-filter-checkbox' 
+			});
+			checkbox.checked = this.selectedTags.has(tag);
+			
+			item.createSpan({ text: tag, cls: 'kanban-tag-filter-label' });
+
+			item.addEventListener('click', () => {
+				checkbox.checked = !checkbox.checked;
+				if (checkbox.checked) {
+					this.selectedTags.add(tag);
+				} else {
+					this.selectedTags.delete(tag);
+				}
+				this.renderHeader(); // Update button count
+				this.renderBoard(); // Filter board
+			});
+			
+			// Prevent double toggle when clicking checkbox directly
+			checkbox.addEventListener('click', (e) => e.stopPropagation());
+			checkbox.addEventListener('change', () => {
+				if (checkbox.checked) {
+					this.selectedTags.add(tag);
+				} else {
+					this.selectedTags.delete(tag);
+				}
+				this.renderHeader();
+				this.renderBoard();
+			});
+		});
+	}
+
+	private getAllTags(): string[] {
+		const tags = new Set<string>();
+		this.cards.forEach(card => {
+			if (card.frontmatter.tags) {
+				const cardTags = Array.isArray(card.frontmatter.tags) 
+					? card.frontmatter.tags 
+					: [card.frontmatter.tags];
+				cardTags.forEach((t: string) => tags.add(t.replace('#', '')));
+			}
+		});
+		return Array.from(tags).sort();
 	}
 
 	private async reorderColumns(draggedColumn: string, targetColumn: string): Promise<void> {

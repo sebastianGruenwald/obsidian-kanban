@@ -95,9 +95,14 @@ export class KanbanCardComponent {
 
 		if (visibleProperties.includes('tags') && this.card.frontmatter.tags) {
 			const tags = Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags];
-			if (tags.length > 0) {
+			
+			// Filter out the board tag
+			const boardTag = this.boardConfig.tagFilter?.replace('#', '');
+			const displayTags = tags.filter((t: string) => t.replace('#', '') !== boardTag);
+
+			if (displayTags.length > 0) {
 				const tagsContainer = body.createDiv({ cls: 'kanban-card-tags-container' });
-				tags.forEach((tag: string) => {
+				displayTags.forEach((tag: string) => {
 					const cleanTag = tag.replace('#', '');
 					const tagEl = tagsContainer.createSpan({ cls: 'kanban-card-tag', text: cleanTag });
 					

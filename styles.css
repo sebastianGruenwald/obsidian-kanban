@@ -581,6 +581,7 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
 .kanban-header {
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   padding: var(--k-space-md) var(--k-space-xl);
@@ -589,6 +590,7 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--k-border-subtle);
   z-index: 10;
+  gap: var(--k-space-md);
 }
 
 .kanban-board-title {
@@ -602,6 +604,89 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
 .kanban-board-controls {
   display: flex;
   gap: var(--k-space-sm);
+}
+
+/* --- Tag Filter Popup --- */
+.kanban-tag-filter-popup {
+  position: fixed;
+  width: 250px;
+  max-height: 300px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--k-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.theme-dark .kanban-tag-filter-popup {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.kanban-tag-filter-search {
+  padding: var(--k-space-sm);
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.kanban-tag-filter-search input {
+  width: 100%;
+}
+
+.kanban-tag-filter-list {
+  overflow-y: auto;
+  padding: var(--k-space-xs) 0;
+  max-height: 250px;
+}
+
+.kanban-tag-filter-item {
+  display: flex;
+  align-items: center;
+  padding: 6px var(--k-space-sm);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.kanban-tag-filter-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.kanban-tag-filter-checkbox {
+  margin-right: var(--k-space-sm);
+}
+
+.kanban-tag-filter-label {
+  font-size: 0.9rem;
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanban-tag-filter-empty {
+  padding: var(--k-space-md);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.kanban-filter-btn.is-active {
+  color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.kanban-filter-count {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  margin-left: 4px;
+  height: 16px;
+  line-height: 16px;
+  display: inline-block;
 }
 
 .kanban-board-controls button {
