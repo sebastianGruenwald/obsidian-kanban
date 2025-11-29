@@ -175,21 +175,35 @@ export class KanbanColumnComponent {
 	}
 
 	private makeDroppable(element: HTMLElement): void {
+		let isScheduled = false;
+		let lastY = 0;
+
 		element.addEventListener('dragover', (e) => {
 			e.preventDefault();
 			element.addClass('drag-over');
+			lastY = e.clientY;
 			
-			const draggedCard = this.callbacks.getDraggedCard();
-			const placeholder = this.callbacks.getPlaceholder();
+			if (!isScheduled) {
+				isScheduled = true;
+				requestAnimationFrame(() => {
+					const draggedCard = this.callbacks.getDraggedCard();
+					const placeholder = this.callbacks.getPlaceholder();
 
-			if (placeholder && draggedCard) {
-				const afterElement = this.getDragAfterElement(element, e.clientY);
-				
-				if (afterElement == null) {
-					element.appendChild(placeholder);
-				} else {
-					element.insertBefore(placeholder, afterElement);
-				}
+					if (placeholder && draggedCard) {
+						const afterElement = this.getDragAfterElement(element, lastY);
+						
+						if (afterElement == null) {
+							if (placeholder.parentNode !== element || placeholder.nextSibling) {
+								element.appendChild(placeholder);
+							}
+						} else {
+							if (placeholder.nextSibling !== afterElement) {
+								element.insertBefore(placeholder, afterElement);
+							}
+						}
+					}
+					isScheduled = false;
+				});
 			}
 		});
 		
@@ -227,18 +241,20 @@ export class KanbanColumnComponent {
 	}
 
 	private getDragAfterElement(container: HTMLElement, y: number): Element | null {
-		const draggableElements = Array.from(container.querySelectorAll('.kanban-card:not(.dragging)'));
-
-		return draggableElements.reduce((closest: { offset: number, element: Element | null }, child) => {
-			const box = child.getBoundingClientRect();
-			const offset = y - box.top - box.height / 2;
-			
-			if (offset < 0 && offset > closest.offset) {
-				return { offset: offset, element: child };
-			} else {
-				return closest;
+		// Optimization: Use children iteration instead of querySelectorAll + reduce
+		// This avoids array allocation and stops as soon as the target is found
+		const children = container.children;
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i];
+			if (child.classList.contains('kanban-card') && !child.classList.contains('dragging')) {
+				const box = child.getBoundingClientRect();
+				const centerY = box.top + box.height / 2;
+				if (y < centerY) {
+					return child;
+				}
 			}
-		}, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+		}
+		return null;
 	}
 
 	private startInlineCardCreation(): void {

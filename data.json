@@ -22,6 +22,7 @@
       "columnOrder": [
         "To Do",
         "In Progress",
+        "Blocked",
         "Done"
       ],
       "visibleProperties": [
