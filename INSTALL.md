@@ -10,7 +10,7 @@
 ### Installation Steps
 1. Open Obsidian Command Palette (`Ctrl/Cmd + P`)
 2. Run: **"BRAT: Add a beta plugin for testing"**
-3. Paste this repository URL: `https://github.com/waschtlgrea/obsidian-kanban`
+3. Paste this repository URL: `https://github.com/sebastianGruenwald/obsidian-kanban`
 4. Click **"Add Plugin"**
 5. Enable the plugin in Settings → Community Plugins
 
@@ -25,7 +25,7 @@
 ## Method 2: Manual Installation
 
 ### Download from Releases
-1. Go to the [Releases page](https://github.com/waschtlgrea/obsidian-kanban/releases)
+1. Go to the [Releases page](https://github.com/sebastianGruenwald/obsidian-kanban/releases)
 2. Download the latest `obsidian-kanban.zip`
 3. Extract the zip file
 4. Copy the files to: `VaultName/.obsidian/plugins/kanban-board/`
@@ -50,7 +50,7 @@ Make sure these files are in your plugins folder:
 1. **Clone the repository**
    ```bash
    cd /path/to/your/vault/.obsidian/plugins/
-   git clone https://github.com/waschtlgrea/obsidian-kanban.git kanban-board
+   git clone https://github.com/sebastianGruenwald/obsidian-kanban.git kanban-board
    cd kanban-board
    ```
 
@@ -115,6 +115,6 @@ After installation, verify the plugin is working:
 
 ## Getting Help
 
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/waschtlgrea/obsidian-kanban/issues)
-- **Discussions**: Join conversations in [GitHub Discussions](https://github.com/waschtlgrea/obsidian-kanban/discussions)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/sebastianGruenwald/obsidian-kanban/issues)
+- **Discussions**: Join conversations in [GitHub Discussions](https://github.com/sebastianGruenwald/obsidian-kanban/discussions)
 - **Updates**: Watch the repository for notifications about new releases
