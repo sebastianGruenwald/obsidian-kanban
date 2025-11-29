@@ -28,8 +28,8 @@
         "tags",
         "priority"
       ],
-      "sortBy": "priority",
-      "sortOrder": "asc",
+      "sortBy": "modification",
+      "sortOrder": "desc",
       "cardDensity": "comfortable",
       "showColumnBackgrounds": false,
       "colorfulHeaders": true

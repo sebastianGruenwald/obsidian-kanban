@@ -37,7 +37,16 @@ export class DataManager {
 		
 		// Check if file has the required tag
 		const tags = getAllTags(cache);
-		return tags.includes(this.boardConfig.tagFilter);
+		if (!tags.includes(this.boardConfig.tagFilter)) {
+			return false;
+		}
+
+		// Check if archived
+		if (cache?.frontmatter?.archived === true) {
+			return false;
+		}
+
+		return true;
 	}
 
 	private async createCardFromFile(file: TFile): Promise<KanbanCard | null> {
@@ -120,14 +129,31 @@ export class DataManager {
 				throw new Error('File not found');
 			}
 
-			const content = await this.app.vault.read(file);
-			const updatedContent = this.updateFrontmatterProperty(content, this.boardConfig.columnProperty, newColumn);
-			
-			await this.app.vault.modify(file, updatedContent);
+			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				frontmatter[this.boardConfig.columnProperty] = newColumn;
+			});
 		} catch (error) {
 			console.error('Error updating card column:', error);
 			const message = error instanceof Error ? error.message : 'Unknown error';
 			showError(`Failed to move card: ${message}`);
+			throw error;
+		}
+	}
+
+	async archiveCard(cardPath: string): Promise<void> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(cardPath);
+			if (!(file instanceof TFile)) {
+				throw new Error('File not found');
+			}
+
+			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				frontmatter['archived'] = true;
+			});
+		} catch (error) {
+			console.error('Error archiving card:', error);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			showError(`Failed to archive card: ${message}`);
 			throw error;
 		}
 	}
@@ -150,10 +176,7 @@ export class DataManager {
 				counter++;
 			}
 
-			const frontmatter = {
-				[this.boardConfig.columnProperty]: columnName
-			};
-
+			// Create the file first
 			let content = '';
 			if (this.settings.cardTemplate) {
 				// Use template
@@ -164,24 +187,39 @@ export class DataManager {
 					content = content.replace(/{{title}}/g, title);
 					content = content.replace(/{{date}}/g, new Date().toISOString().split('T')[0]);
 					content = content.replace(/{{time}}/g, new Date().toLocaleTimeString());
-					
-					// Ensure frontmatter exists and has the column property
-					content = this.updateFrontmatterProperty(content, this.boardConfig.columnProperty, columnName);
-					
-					// Ensure tag exists
-					if (!content.includes(this.boardConfig.tagFilter)) {
-						content += `\n\n${this.boardConfig.tagFilter}`;
-					}
 				} else {
-					// Template file not found, fall back to default
-					content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+					content = `# ${title}`;
 				}
 			} else {
-				// Default content
-				content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+				content = `# ${title}`;
 			}
 			
-			await this.app.vault.create(filePath, content);
+			const newFile = await this.app.vault.create(filePath, content);
+
+			// Then use processFrontMatter to set metadata safely
+			await this.app.fileManager.processFrontMatter(newFile, (frontmatter) => {
+				frontmatter[this.boardConfig.columnProperty] = columnName;
+				
+				// Ensure tag exists in frontmatter tags if not in content
+				// Note: This is a simple way to add the tag. 
+				// Ideally we check if it's in the content, but for now adding to frontmatter is safe.
+				if (!content.includes(this.boardConfig.tagFilter)) {
+					const tag = this.boardConfig.tagFilter.replace('#', '');
+					if (!frontmatter.tags) {
+						frontmatter.tags = [tag];
+					} else if (Array.isArray(frontmatter.tags)) {
+						if (!frontmatter.tags.includes(tag)) {
+							frontmatter.tags.push(tag);
+						}
+					} else {
+						// String tag
+						if (frontmatter.tags !== tag) {
+							frontmatter.tags = [frontmatter.tags, tag];
+						}
+					}
+				}
+			});
+
 		} catch (error) {
 			console.error('Error creating new card:', error);
 			const message = error instanceof Error ? error.message : 'Unknown error';
@@ -190,39 +228,6 @@ export class DataManager {
 		}
 	}
 
-	private createFrontmatterContent(frontmatter: Record<string, any>): string {
-		const lines = ['---'];
-		for (const [key, value] of Object.entries(frontmatter)) {
-			lines.push(`${key}: "${value}"`);
-		}
-		lines.push('---');
-		return lines.join('\n');
-	}
+	// Helper methods removed as they are replaced by app.fileManager.processFrontMatter
 
-	private updateFrontmatterProperty(content: string, property: string, value: string): string {
-		const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---/;
-		const match = content.match(frontmatterRegex);
-
-		if (match) {
-			// Update existing frontmatter
-			const frontmatterContent = match[1];
-			const propertyRegex = new RegExp(`^${property}:\\s*.*$`, 'm');
-			
-			if (propertyRegex.test(frontmatterContent)) {
-				// Property exists, update it
-				const updatedFrontmatter = frontmatterContent.replace(
-					propertyRegex,
-					`${property}: "${value}"`
-				);
-				return content.replace(frontmatterRegex, `---\n${updatedFrontmatter}\n---`);
-			} else {
-				// Property doesn't exist, add it
-				const updatedFrontmatter = `${frontmatterContent}\n${property}: "${value}"`;
-				return content.replace(frontmatterRegex, `---\n${updatedFrontmatter}\n---`);
-			}
-		} else {
-			// No frontmatter exists, create it
-			return `---\n${property}: "${value}"\n---\n\n${content}`;
-		}
-	}
 }
