@@ -12,6 +12,8 @@ export interface BoardConfig {
 	sortOrder: 'asc' | 'desc';
 	cardDensity: 'compact' | 'comfortable' | 'spacious';
 	tagColors: Record<string, string>;
+	showColumnBackgrounds: boolean;
+	colorfulHeaders: boolean;
 }
 
 export interface KanbanSettings {
@@ -36,7 +38,9 @@ export const DEFAULT_BOARD: BoardConfig = {
 	sortBy: 'creation',
 	sortOrder: 'desc',
 	cardDensity: 'comfortable',
-	tagColors: {}
+	tagColors: {},
+	showColumnBackgrounds: false,
+	colorfulHeaders: true
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {

@@ -190,6 +190,30 @@ export class KanbanSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllViews();
 				}));
 
+		// Column Backgrounds
+		new Setting(contentDiv)
+			.setName('Distinct Column Backgrounds')
+			.setDesc('Add a distinct background color to columns to make them stand out')
+			.addToggle(toggle => toggle
+				.setValue(board.showColumnBackgrounds || false)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { showColumnBackgrounds: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		// Colorful Headers
+		new Setting(contentDiv)
+			.setName('Colorful Headers')
+			.setDesc('Add a splash of color to column headers')
+			.addToggle(toggle => toggle
+				.setValue(board.colorfulHeaders !== false) // Default to true if undefined
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { colorfulHeaders: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
 		// Tag Colors
 		this.displayTagColors(contentDiv, board);
 

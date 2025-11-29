@@ -30,7 +30,9 @@
       ],
       "sortBy": "priority",
       "sortOrder": "asc",
-      "cardDensity": "comfortable"
+      "cardDensity": "comfortable",
+      "showColumnBackgrounds": false,
+      "colorfulHeaders": true
     }
   ],
   "activeBoard": "default",

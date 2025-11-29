@@ -43,6 +43,24 @@
   --k-transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Distinct Columns Mode */
+.kanban-board.distinct-columns {
+  --k-bg-column: var(--background-secondary-alt);
+}
+
+.theme-dark .kanban-board.distinct-columns {
+  --k-bg-column: rgba(255, 255, 255, 0.1);
+}
+
+.theme-light .kanban-board.distinct-columns {
+  --k-bg-column: rgba(0, 0, 0, 0.08);
+}
+
+.kanban-board.distinct-columns .kanban-column {
+  border-color: var(--background-modifier-border-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* Dark Mode Adjustments */
 .theme-dark {
   --k-bg-column: rgba(255, 255, 255, 0.03);
@@ -163,7 +181,25 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--k-space-md);
-  border-bottom: 1px solid transparent; /* Reserved for scroll state */
+  border-bottom: 1px solid transparent;
+  position: relative;
+}
+
+/* Colorful Headers Mode */
+.kanban-board.colorful-headers .kanban-column-header {
+  border-bottom: 1px solid var(--k-border-subtle);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--interactive-accent) 12%, transparent), transparent);
+}
+
+.kanban-board.colorful-headers .kanban-column-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--interactive-accent);
+  opacity: 0.8;
 }
 
 .kanban-column-title-container {
@@ -172,6 +208,10 @@
   gap: var(--k-space-sm);
   flex-grow: 1;
   overflow: hidden;
+}
+
+.kanban-board.colorful-headers .kanban-column-title-container {
+  padding-top: 4px;
 }
 
 .kanban-column-title {
@@ -183,6 +223,12 @@
   text-overflow: ellipsis;
 }
 
+.kanban-board.colorful-headers .kanban-column-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
 .kanban-column-count {
   font-size: 0.75rem;
   font-weight: 600;
@@ -190,6 +236,13 @@
   background: var(--background-modifier-hover);
   padding: 2px 8px;
   border-radius: 12px;
+}
+
+.kanban-board.colorful-headers .kanban-column-count {
+  font-weight: 700;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .kanban-column-drag-handle {

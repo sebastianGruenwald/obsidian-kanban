@@ -70,6 +70,14 @@ export class KanbanView extends ItemView {
 		
 		const kanbanContainer = container.createDiv({ cls: 'kanban-board' });
 		
+		if (this.currentBoard?.showColumnBackgrounds) {
+			kanbanContainer.addClass('distinct-columns');
+		}
+
+		if (this.currentBoard?.colorfulHeaders !== false) {
+			kanbanContainer.addClass('colorful-headers');
+		}
+		
 		// Create columns
 		for (const columnName of this.columns) {
 			const columnCards = this.cards.filter(card => card.column === columnName);
