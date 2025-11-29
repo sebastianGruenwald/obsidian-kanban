@@ -12,6 +12,7 @@ export class KanbanView extends ItemView {
 	private cards: KanbanCard[] = [];
 	private columns: string[] = [];
 	private draggedCard: HTMLElement | null = null;
+	private placeholder: HTMLElement | null = null;
 	private currentBoard: BoardConfig | null = null;
 	private resizingColumn: { name: string, startX: number, startWidth: number } | null = null;
 
@@ -395,11 +396,21 @@ export class KanbanView extends ItemView {
 			this.draggedCard = cardEl;
 			cardEl.addClass('dragging');
 			e.dataTransfer?.setData('text/plain', card.file);
+			
+			// Create placeholder
+			this.placeholder = createDiv({ cls: 'kanban-card-placeholder' });
+			this.placeholder.style.height = `${cardEl.offsetHeight}px`;
 		});
 		
 		cardEl.addEventListener('dragend', () => {
 			cardEl.removeClass('dragging');
 			this.draggedCard = null;
+			
+			// Remove placeholder
+			if (this.placeholder) {
+				this.placeholder.remove();
+				this.placeholder = null;
+			}
 		});
 		
 		// Card content based on visible properties
@@ -554,10 +565,28 @@ export class KanbanView extends ItemView {
 		element.addEventListener('dragover', (e) => {
 			e.preventDefault();
 			element.addClass('drag-over');
+			
+			// Show placeholder logic
+			if (this.placeholder && this.draggedCard) {
+				const cards = Array.from(element.querySelectorAll('.kanban-card:not(.dragging)'));
+				const afterElement = this.getDragAfterElement(element, e.clientY);
+				
+				if (afterElement == null) {
+					element.appendChild(this.placeholder);
+				} else {
+					element.insertBefore(this.placeholder, afterElement);
+				}
+			}
 		});
 		
-		element.addEventListener('dragleave', () => {
-			element.removeClass('drag-over');
+		element.addEventListener('dragleave', (e) => {
+			// Only remove if we're actually leaving the column content area
+			if (!element.contains(e.relatedTarget as Node)) {
+				element.removeClass('drag-over');
+				if (this.placeholder && this.placeholder.parentNode === element) {
+					this.placeholder.remove();
+				}
+			}
 		});
 		
 		element.addEventListener('drop', async (e) => {
@@ -566,17 +595,48 @@ export class KanbanView extends ItemView {
 			
 			const filePath = e.dataTransfer?.getData('text/plain');
 			if (filePath && this.draggedCard) {
+				// Optimistic UI update
+				if (this.placeholder && this.placeholder.parentNode === element) {
+					element.insertBefore(this.draggedCard, this.placeholder);
+					this.placeholder.remove();
+				} else {
+					element.appendChild(this.draggedCard);
+				}
+				
+				// Remove dragging class immediately
+				this.draggedCard.removeClass('dragging');
+				
+				// Update data in background
 				await this.moveCard(filePath, columnName);
 			}
 		});
 	}
 
+	private getDragAfterElement(container: HTMLElement, y: number): Element | null {
+		const draggableElements = Array.from(container.querySelectorAll('.kanban-card:not(.dragging)'));
+
+		return draggableElements.reduce((closest: { offset: number, element: Element | null }, child) => {
+			const box = child.getBoundingClientRect();
+			const offset = y - box.top - box.height / 2;
+			
+			if (offset < 0 && offset > closest.offset) {
+				return { offset: offset, element: child };
+			} else {
+				return closest;
+			}
+		}, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+	}
+
 	private async moveCard(filePath: string, newColumn: string): Promise<void> {
 		try {
 			await this.dataManager.updateCardColumn(filePath, newColumn);
-			await this.refresh(); // Refresh to show the updated position
+			// Note: We don't call refresh() here anymore because the file watcher in main.ts
+			// will trigger a refresh when the file is modified.
+			// This prevents double-refreshing and makes the UI feel snappier.
 		} catch (error) {
 			console.error('Failed to move card:', error);
+			// If it fails, we should probably refresh to restore state
+			await this.refresh();
 		}
 	}
 
