@@ -45,5 +45,6 @@
     "modified",
     "tags",
     "priority"
-  ]
+  ],
+  "theme": "sticky-notes"
 }

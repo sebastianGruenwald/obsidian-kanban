@@ -480,3 +480,207 @@
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
 }
+
+/* ==========================================================================
+   THEME: Sticky Notes (Whiteboard)
+   ========================================================================== */
+
+/* Import a handwriting-style font */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
+
+.kanban-board.theme-sticky-notes {
+  /* Whiteboard background */
+  background-color: #f5f5f0;
+  background-image: 
+    linear-gradient(rgba(200, 200, 200, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 200, 200, 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes {
+  background-color: #2d2d2d;
+  background-image: 
+    linear-gradient(rgba(100, 100, 100, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 100, 100, 0.3) 1px, transparent 1px);
+}
+
+/* Columns in sticky notes theme - more transparent */
+.kanban-board.theme-sticky-notes .kanban-column {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.kanban-board.theme-sticky-notes .kanban-column-header {
+  background: transparent !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+  padding-bottom: var(--k-space-md);
+}
+
+.kanban-board.theme-sticky-notes .kanban-column-header::before {
+  display: none;
+}
+
+.kanban-board.theme-sticky-notes .kanban-column-title {
+  font-family: 'Caveat', cursive;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-column-title {
+  color: #e0e0e0;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-column-header {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Sticky note cards */
+.kanban-board.theme-sticky-notes .kanban-card {
+  background: #fff9b1;
+  border: none;
+  border-radius: 2px;
+  box-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.15),
+    0 0 1px rgba(0, 0, 0, 0.1);
+  transform: rotate(-0.5deg);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.kanban-board.theme-sticky-notes .kanban-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.05), transparent);
+}
+
+/* Alternate sticky note colors */
+.kanban-board.theme-sticky-notes .kanban-card:nth-child(3n+1) {
+  background: #fff9b1; /* Yellow */
+  transform: rotate(-0.5deg);
+}
+
+.kanban-board.theme-sticky-notes .kanban-card:nth-child(3n+2) {
+  background: #ffb3ba; /* Pink */
+  transform: rotate(0.5deg);
+}
+
+.kanban-board.theme-sticky-notes .kanban-card:nth-child(3n+3) {
+  background: #bae1ff; /* Blue */
+  transform: rotate(-0.3deg);
+}
+
+/* More colors for variety */
+.kanban-board.theme-sticky-notes .kanban-card:nth-child(5n+4) {
+  background: #baffc9; /* Green */
+  transform: rotate(0.3deg);
+}
+
+.kanban-board.theme-sticky-notes .kanban-card:nth-child(7n+5) {
+  background: #ffdfba; /* Orange */
+  transform: rotate(-0.4deg);
+}
+
+.kanban-board.theme-sticky-notes .kanban-card:hover {
+  transform: rotate(0deg) scale(1.02);
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.2),
+    0 0 2px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Card content styling for sticky notes */
+.kanban-board.theme-sticky-notes .kanban-card-title {
+  font-family: 'Caveat', cursive;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.2;
+}
+
+.kanban-board.theme-sticky-notes .kanban-card-body {
+  font-family: 'Caveat', cursive;
+}
+
+.kanban-board.theme-sticky-notes .kanban-card-footer {
+  font-family: 'Caveat', cursive;
+  font-size: 0.95rem;
+  border-top-color: rgba(0, 0, 0, 0.1);
+  color: #555;
+}
+
+.kanban-board.theme-sticky-notes .kanban-card-date {
+  font-family: 'Caveat', cursive;
+}
+
+.kanban-board.theme-sticky-notes .kanban-card-tag {
+  font-family: 'Caveat', cursive;
+  font-size: 0.9rem;
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+  border-radius: 2px;
+}
+
+.kanban-board.theme-sticky-notes .kanban-card-property {
+  font-family: 'Caveat', cursive;
+  font-size: 0.95rem;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.kanban-board.theme-sticky-notes .kanban-card-property-key,
+.kanban-board.theme-sticky-notes .kanban-card-property-value {
+  color: #333;
+}
+
+/* Placeholder in sticky notes theme */
+.kanban-board.theme-sticky-notes .kanban-card-placeholder {
+  background: rgba(255, 249, 177, 0.5);
+  border: 2px dashed #ccc;
+  border-radius: 2px;
+}
+
+/* Column count badge */
+.kanban-board.theme-sticky-notes .kanban-column-count {
+  font-family: 'Caveat', cursive;
+  font-size: 1rem;
+  background: transparent;
+  color: #666;
+}
+
+/* Buttons in sticky notes theme */
+.kanban-board.theme-sticky-notes .kanban-column-controls button {
+  border-radius: 2px;
+}
+
+/* Dark mode adjustments for sticky notes */
+.theme-dark .kanban-board.theme-sticky-notes .kanban-card {
+  box-shadow: 
+    2px 2px 6px rgba(0, 0, 0, 0.4),
+    0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-card:nth-child(3n+1) {
+  background: #d4c86a;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-card:nth-child(3n+2) {
+  background: #c98a8f;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-card:nth-child(3n+3) {
+  background: #8ab4d4;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-card:nth-child(5n+4) {
+  background: #8fc99e;
+}
+
+.theme-dark .kanban-board.theme-sticky-notes .kanban-card:nth-child(7n+5) {
+  background: #d4b38a;
+}
+

@@ -436,6 +436,19 @@ export class KanbanSettingTab extends PluginSettingTab {
 		globalSection.createEl('h3', { text: 'Global Settings' });
 
 		new Setting(globalSection)
+			.setName('Theme')
+			.setDesc('Choose the visual theme for your kanban boards')
+			.addDropdown(dropdown => dropdown
+				.addOption('default', 'Default (Modern)')
+				.addOption('sticky-notes', 'Sticky Notes (Whiteboard)')
+				.setValue(this.plugin.settings.theme || 'default')
+				.onChange(async (value) => {
+					this.plugin.settings.theme = value as any;
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		new Setting(globalSection)
 			.setName('Auto-refresh')
 			.setDesc('Automatically refresh the kanban board when files change')
 			.addToggle(toggle => toggle

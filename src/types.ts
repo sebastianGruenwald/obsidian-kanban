@@ -16,6 +16,8 @@ export interface BoardConfig {
 	colorfulHeaders: boolean;
 }
 
+export type KanbanTheme = 'default' | 'sticky-notes';
+
 export interface KanbanSettings {
 	boards: BoardConfig[];
 	activeBoard: string;
@@ -23,6 +25,7 @@ export interface KanbanSettings {
 	showFileCount: boolean;
 	cardTemplate: string;
 	defaultVisibleProperties: string[];
+	theme: KanbanTheme;
 }
 
 export const DEFAULT_BOARD: BoardConfig = {
@@ -49,7 +52,8 @@ export const DEFAULT_SETTINGS: KanbanSettings = {
 	autoRefresh: true,
 	showFileCount: true,
 	cardTemplate: '',
-	defaultVisibleProperties: ['title', 'created', 'modified']
+	defaultVisibleProperties: ['title', 'created', 'modified'],
+	theme: 'default'
 };
 
 export interface KanbanCard {
