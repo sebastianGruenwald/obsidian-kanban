@@ -31,7 +31,7 @@
       "sortBy": "modification",
       "sortOrder": "desc",
       "cardDensity": "comfortable",
-      "showColumnBackgrounds": true,
+      "showColumnBackgrounds": false,
       "colorfulHeaders": true
     }
   ],
