@@ -7,11 +7,11 @@ A powerful plugin for Obsidian that creates customizable kanban boards from note
 ### Option 1: BRAT (Beta Reviewer's Auto-update Tool)
 1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) if you haven't already
 2. Open the command palette and run "BRAT: Add a beta plugin for testing"
-3. Enter this repository URL: `https://github.com/yourusername/obsidian-kanban-board`
+3. Enter this repository URL: `https://github.com/waschtlgrea/obsidian-kanban`
 4. Click "Add Plugin" - BRAT will install and enable the plugin
 
 ### Option 2: Manual Installation
-1. Download the latest release from the [Releases page](https://github.com/yourusername/obsidian-kanban-board/releases)
+1. Download the latest release from the [Releases page](https://github.com/waschtlgrea/obsidian-kanban/releases)
 2. Extract the files to your vault's `.obsidian/plugins/kanban-board/` folder
 3. Enable the plugin in Settings → Community Plugins
 

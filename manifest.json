@@ -1,11 +1,11 @@
 {
-	"id": "kanban-board",
+	"id": "obsidian-kanban",
 	"name": "Kanban Board",
 	"version": "2.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Create multiple kanban boards with swimlanes from notes with specific tags and frontmatter properties. Supports custom columns, configurable card properties, and board-specific settings.",
-	"author": "Your Name",
-	"authorUrl": "https://your-website.com",
+	"author": "Waschtlgrea",
+	"authorUrl": "https://gitlab.com/waschtlgrea",
 	"fundingUrl": "https://buymeacoffee.com/your-name",
 	"isDesktopOnly": false
 }

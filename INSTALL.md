@@ -10,7 +10,7 @@
 ### Installation Steps
 1. Open Obsidian Command Palette (`Ctrl/Cmd + P`)
 2. Run: **"BRAT: Add a beta plugin for testing"**
-3. Paste this repository URL: `https://github.com/yourusername/obsidian-kanban-board`
+3. Paste this repository URL: `https://github.com/waschtlgrea/obsidian-kanban-board`
 4. Click **"Add Plugin"**
 5. Enable the plugin in Settings → Community Plugins
 
@@ -25,7 +25,7 @@
 ## Method 2: Manual Installation
 
 ### Download from Releases
-1. Go to the [Releases page](https://github.com/yourusername/obsidian-kanban-board/releases)
+1. Go to the [Releases page](https://github.com/waschtlgrea/obsidian-kanban-board/releases)
 2. Download the latest `obsidian-kanban-board.zip`
 3. Extract the zip file
 4. Copy the files to: `VaultName/.obsidian/plugins/kanban-board/`
