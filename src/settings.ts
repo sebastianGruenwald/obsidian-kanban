@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, TFile } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFile, setIcon } from 'obsidian';
 import KanbanPlugin from './main';
 import { BoardConfig } from './types';
 import { CreateBoardModal, AddColumnModal } from './modals';
@@ -64,9 +64,9 @@ export class KanbanSettingTab extends PluginSettingTab {
 		const isExpanded = board.id === this.currentBoardId;
 		
 		const toggleBtn = headerDiv.createEl('button', { 
-			text: isExpanded ? '▼' : '▶',
 			cls: 'board-settings-toggle'
 		});
+		setIcon(toggleBtn, isExpanded ? 'chevron-down' : 'chevron-right');
 		
 		headerDiv.createEl('h3', { 
 			text: `${board.name}${board.id === this.plugin.settings.activeBoard ? ' (Active)' : ''}`,
@@ -81,7 +81,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 		toggleBtn.addEventListener('click', () => {
 			const isCurrentlyExpanded = contentDiv.style.display === 'block';
 			contentDiv.style.display = isCurrentlyExpanded ? 'none' : 'block';
-			toggleBtn.setText(isCurrentlyExpanded ? '▶' : '▼');
+			setIcon(toggleBtn, isCurrentlyExpanded ? 'chevron-right' : 'chevron-down');
 			this.currentBoardId = isCurrentlyExpanded ? '' : board.id;
 		});
 
@@ -190,6 +190,9 @@ export class KanbanSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllViews();
 				}));
 
+		// Tag Colors
+		this.displayTagColors(contentDiv, board);
+
 		// Delete board button (only if more than one board exists)
 		const allBoards = this.plugin.boardManager.getAllBoards();
 		if (allBoards.length > 1) {
@@ -213,6 +216,71 @@ export class KanbanSettingTab extends PluginSettingTab {
 						}
 					}));
 		}
+	}
+
+	private displayTagColors(containerEl: HTMLElement, board: BoardConfig): void {
+		const tagSection = containerEl.createDiv({ cls: 'tag-colors-section' });
+		tagSection.createEl('h4', { text: 'Tag Colors' });
+		tagSection.createEl('p', { text: 'Customize colors for tags found in this board.', cls: 'setting-item-description' });
+
+		// Helper to get all unique tags from the board
+		// We need to instantiate DataManager temporarily or just rely on what we know.
+		// Since we can't easily get cards here without async, we'll just let users add tags manually 
+		// OR we can try to scan if we want to be fancy. 
+		// For now, let's just list the ones already configured + an add button.
+		
+		const configuredTags = Object.keys(board.tagColors || {});
+		
+		if (configuredTags.length === 0) {
+			tagSection.createDiv({ text: 'No custom tag colors configured.', cls: 'setting-item-description' });
+		}
+
+		configuredTags.forEach(tag => {
+			const setting = new Setting(tagSection)
+				.setName(`#${tag}`)
+				.addColorPicker(color => color
+					.setValue(board.tagColors[tag])
+					.onChange(async (value) => {
+						const newColors = { ...board.tagColors, [tag]: value };
+						this.plugin.boardManager.updateBoard(board.id, { tagColors: newColors });
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+					}))
+				.addButton(button => button
+					.setIcon('trash')
+					.setTooltip('Remove custom color')
+					.onClick(async () => {
+						const newColors = { ...board.tagColors };
+						delete newColors[tag];
+						this.plugin.boardManager.updateBoard(board.id, { tagColors: newColors });
+						await this.plugin.saveSettings();
+						this.display(); // Re-render to remove the item
+						this.plugin.refreshAllViews();
+					}));
+		});
+
+		// Add new tag color
+		new Setting(tagSection)
+			.setName('Add Tag Color')
+			.setDesc('Enter a tag name (without #) to customize its color')
+			.addText(text => text
+				.setPlaceholder('tag-name')
+				.onChange(async (value) => {
+					text.inputEl.setAttribute('data-value', value);
+				}))
+			.addButton(button => button
+				.setButtonText('Add')
+				.onClick(async () => {
+					const input = button.buttonEl.parentElement?.parentElement?.querySelector('input');
+					const tag = input?.getAttribute('data-value');
+					if (tag) {
+						const newColors = { ...board.tagColors, [tag]: '#5c7cfa' }; // Default blue-ish
+						this.plugin.boardManager.updateBoard(board.id, { tagColors: newColors });
+						await this.plugin.saveSettings();
+						this.display();
+						this.plugin.refreshAllViews();
+					}
+				}));
 	}
 
 	private displayColumnManagement(containerEl: HTMLElement, board: BoardConfig): void {

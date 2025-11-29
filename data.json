@@ -10,19 +10,16 @@
         "In Progress",
         "Done"
       ],
-      "customColumns": [
-        "blocked"
-      ],
+      "customColumns": [],
       "columnWidths": {
-        "To Do": 344,
-        "In Progress": 150,
+        "To Do": 279,
+        "In Progress": 285,
         "Done": 519,
         "blocked": 354
       },
       "columnOrder": [
         "To Do",
         "In Progress",
-        "blocked",
         "Done"
       ],
       "visibleProperties": [

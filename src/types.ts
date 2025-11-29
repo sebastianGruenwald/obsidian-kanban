@@ -11,6 +11,7 @@ export interface BoardConfig {
 	sortBy: 'creation' | 'modification' | 'title' | 'none' | string;
 	sortOrder: 'asc' | 'desc';
 	cardDensity: 'compact' | 'comfortable' | 'spacious';
+	tagColors: Record<string, string>;
 }
 
 export interface KanbanSettings {
@@ -34,7 +35,8 @@ export const DEFAULT_BOARD: BoardConfig = {
 	visibleProperties: ['title', 'created'],
 	sortBy: 'creation',
 	sortOrder: 'desc',
-	cardDensity: 'comfortable'
+	cardDensity: 'comfortable',
+	tagColors: {}
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {

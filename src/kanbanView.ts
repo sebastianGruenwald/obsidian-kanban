@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Menu, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Menu, TFile, setIcon } from 'obsidian';
 import { KanbanCard, BoardConfig } from './types';
 import { DataManager } from './dataManager';
 import KanbanPlugin from './main';
@@ -160,10 +160,12 @@ export class KanbanView extends ItemView {
 
 		// Add column button
 		const addColumnBtn = controls.createEl('button', { 
-			text: '+ Column', 
 			cls: 'kanban-add-column-btn',
 			attr: { title: 'Add new column' }
 		});
+		setIcon(addColumnBtn, 'plus');
+		addColumnBtn.createSpan({ text: ' Column' });
+		
 		addColumnBtn.addEventListener('click', () => {
 			new AddColumnModal(this.app, this.plugin, this.currentBoard!.id, () => {
 				this.refresh();
@@ -172,10 +174,11 @@ export class KanbanView extends ItemView {
 
 		// Refresh button
 		const refreshBtn = controls.createEl('button', { 
-			text: '⟳', 
 			cls: 'kanban-refresh-btn',
 			attr: { title: 'Refresh Board' }
 		});
+		setIcon(refreshBtn, 'refresh-cw');
+		
 		refreshBtn.addEventListener('click', () => this.refresh());
 	}
 
@@ -250,16 +253,20 @@ export class KanbanView extends ItemView {
 		
 		const titleContainer = header.createDiv({ cls: 'kanban-column-title-container' });
 		titleContainer.createSpan({ text: columnName, cls: 'kanban-column-title' });
-		titleContainer.createSpan({ text: '⋮⋮', cls: 'kanban-column-drag-handle' });
+		
+		// Removed drag handle icon as requested
+		// const dragHandle = titleContainer.createSpan({ cls: 'kanban-column-drag-handle' });
+		// setIcon(dragHandle, 'grip-vertical');
 		
 		const headerControls = header.createDiv({ cls: 'kanban-column-controls' });
 		
 		// Add card button
 		const addBtn = headerControls.createEl('button', { 
-			text: '+', 
 			cls: 'kanban-add-card-btn',
 			attr: { title: 'Add new card' }
 		});
+		setIcon(addBtn, 'plus');
+		
 		addBtn.addEventListener('click', () => {
 			new CreateCardModal(this.app, this.dataManager, columnName, () => {
 				this.refresh();
@@ -268,10 +275,11 @@ export class KanbanView extends ItemView {
 
 		// Column options button
 		const optionsBtn = headerControls.createEl('button', { 
-			text: '⋯', 
 			cls: 'kanban-column-options-btn',
 			attr: { title: 'Column options' }
 		});
+		setIcon(optionsBtn, 'more-horizontal');
+		
 		optionsBtn.addEventListener('click', (e) => {
 			this.showColumnMenu(e, columnName);
 		});
@@ -310,17 +318,32 @@ export class KanbanView extends ItemView {
 			startWidth: columnEl.offsetWidth
 		};
 
+		let animationFrameId: number;
+
 		const onMouseMove = (e: MouseEvent) => {
 			if (!this.resizingColumn) return;
 			
-			const diff = e.clientX - this.resizingColumn.startX;
-			const newWidth = Math.max(150, this.resizingColumn.startWidth + diff); // Min width 150px
-			
-			// Update flex basis
-			columnEl.style.flex = `0 1 ${newWidth}px`;
+			// Cancel previous frame if it hasn't run yet
+			if (animationFrameId) {
+				cancelAnimationFrame(animationFrameId);
+			}
+
+			animationFrameId = requestAnimationFrame(() => {
+				if (!this.resizingColumn) return;
+				const diff = e.clientX - this.resizingColumn!.startX;
+				const newWidth = Math.max(200, this.resizingColumn!.startWidth + diff); // Min width 200px
+				
+				// Update flex basis
+				columnEl.style.flex = `0 0 ${newWidth}px`;
+				columnEl.style.width = `${newWidth}px`; // Force width
+			});
 		};
 
 		const onMouseUp = async () => {
+			if (animationFrameId) {
+				cancelAnimationFrame(animationFrameId);
+			}
+
 			if (this.resizingColumn) {
 				// Get width from flex-basis or offsetWidth
 				const style = window.getComputedStyle(columnEl);
@@ -404,7 +427,16 @@ export class KanbanView extends ItemView {
 			if (tags.length > 0) {
 				const tagsContainer = body.createDiv({ cls: 'kanban-card-tags-container' });
 				tags.forEach((tag: string) => {
-					tagsContainer.createSpan({ cls: 'kanban-card-tag', text: tag.replace('#', '') });
+					const cleanTag = tag.replace('#', '');
+					const tagEl = tagsContainer.createSpan({ cls: 'kanban-card-tag', text: cleanTag });
+					
+					// Apply tag color
+					const color = this.getTagColor(cleanTag);
+					if (color) {
+						tagEl.style.backgroundColor = color;
+						tagEl.style.color = '#ffffff'; // Assuming dark colors for now, or we could calculate contrast
+						tagEl.style.borderColor = color;
+					}
 				});
 			}
 		}
@@ -432,6 +464,25 @@ export class KanbanView extends ItemView {
 			dateEl.setAttribute('aria-label', 'Modified');
 			dateEl.setText(new Date(card.modified).toLocaleDateString());
 		}
+	}
+
+	private getTagColor(tag: string): string {
+		if (!this.currentBoard) return '';
+		
+		// Check configured colors
+		if (this.currentBoard.tagColors && this.currentBoard.tagColors[tag]) {
+			return this.currentBoard.tagColors[tag];
+		}
+		
+		// Generate deterministic color
+		let hash = 0;
+		for (let i = 0; i < tag.length; i++) {
+			hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		
+		// HSL color generation for nice pastel/vibrant colors
+		const h = Math.abs(hash) % 360;
+		return `hsl(${h}, 70%, 45%)`; // 45% lightness for good contrast with white text
 	}
 
 	private showColumnMenu(event: MouseEvent, columnName: string): void {
