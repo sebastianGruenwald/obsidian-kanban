@@ -18,7 +18,8 @@ export class KanbanCardComponent {
 		private onDragEnd: () => void,
 		private onArchive: (card: KanbanCard) => void,
 		private dataManager?: DataManager,
-		private onTitleChange?: () => void
+		private onTitleChange?: () => void,
+		private showCardColors: boolean = true
 	) {
 		this.element = this.render();
 	}
@@ -33,10 +34,12 @@ export class KanbanCardComponent {
 			cardEl.addClass('density-comfortable');
 		}
 
-		// Apply card color from frontmatter
-		const cardColor = this.card.frontmatter?.cardColor;
-		if (cardColor) {
-			cardEl.setAttribute('data-card-color', cardColor);
+		// Apply card color from frontmatter (only if showCardColors is enabled)
+		if (this.showCardColors) {
+			const cardColor = this.card.frontmatter?.cardColor;
+			if (cardColor) {
+				cardEl.setAttribute('data-card-color', cardColor);
+			}
 		}
 
 		cardEl.setAttribute('data-file-path', this.card.file);

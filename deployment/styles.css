@@ -290,6 +290,32 @@
   z-index: 2;
 }
 
+/* --- Card Colors (Modern Theme - Left Border Accent) --- */
+.kanban-card[data-card-color] {
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.kanban-card[data-card-color="yellow"] { border-left-color: #f0c800; }
+.kanban-card[data-card-color="pink"] { border-left-color: #e85a71; }
+.kanban-card[data-card-color="blue"] { border-left-color: #4a9eff; }
+.kanban-card[data-card-color="green"] { border-left-color: #34c759; }
+.kanban-card[data-card-color="orange"] { border-left-color: #ff9500; }
+.kanban-card[data-card-color="purple"] { border-left-color: #af52de; }
+.kanban-card[data-card-color="coral"] { border-left-color: #ff6b6b; }
+.kanban-card[data-card-color="mint"] { border-left-color: #00c7a8; }
+.kanban-card[data-card-color="lavender"] { border-left-color: #9c88ff; }
+.kanban-card[data-card-color="peach"] { border-left-color: #ffa07a; }
+.kanban-card[data-card-color="sky"] { border-left-color: #00b4d8; }
+.kanban-card[data-card-color="lime"] { border-left-color: #a3e635; }
+
+/* Keep hover border color on sides except left */
+.kanban-card[data-card-color]:hover {
+  border-top-color: var(--interactive-accent);
+  border-right-color: var(--interactive-accent);
+  border-bottom-color: var(--interactive-accent);
+}
+
 .kanban-card.is-dragging {
   opacity: 0.5;
   transform: scale(0.95);
@@ -781,6 +807,7 @@
 
 /* Dark mode adjustments for sticky notes */
 .theme-dark .kanban-board.theme-sticky-notes .kanban-card {
+  background: #d4c86a;
   box-shadow: 
     2px 2px 6px rgba(0, 0, 0, 0.4),
     0 0 1px rgba(0, 0, 0, 0.2);

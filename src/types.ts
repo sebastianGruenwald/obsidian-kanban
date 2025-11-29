@@ -14,6 +14,8 @@ export interface BoardConfig {
 	tagColors: Record<string, string>;
 	showColumnBackgrounds: boolean;
 	colorfulHeaders: boolean;
+	theme: KanbanTheme;
+	showCardColors: boolean;
 }
 
 export type KanbanTheme = 'default' | 'sticky-notes';
@@ -25,7 +27,6 @@ export interface KanbanSettings {
 	showFileCount: boolean;
 	cardTemplate: string;
 	defaultVisibleProperties: string[];
-	theme: KanbanTheme;
 }
 
 export const DEFAULT_BOARD: BoardConfig = {
@@ -43,7 +44,9 @@ export const DEFAULT_BOARD: BoardConfig = {
 	cardDensity: 'comfortable',
 	tagColors: {},
 	showColumnBackgrounds: false,
-	colorfulHeaders: true
+	colorfulHeaders: true,
+	theme: 'sticky-notes',
+	showCardColors: true
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {
@@ -52,8 +55,7 @@ export const DEFAULT_SETTINGS: KanbanSettings = {
 	autoRefresh: true,
 	showFileCount: true,
 	cardTemplate: '',
-	defaultVisibleProperties: ['title', 'created', 'modified'],
-	theme: 'sticky-notes'
+	defaultVisibleProperties: ['title', 'created', 'modified']
 };
 
 export interface KanbanCard {

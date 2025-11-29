@@ -190,6 +190,32 @@ export class KanbanSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllViews();
 				}));
 
+		// Theme
+		new Setting(contentDiv)
+			.setName('Theme')
+			.setDesc('Choose the visual theme for this board')
+			.addDropdown(dropdown => dropdown
+				.addOption('default', 'Modern')
+				.addOption('sticky-notes', 'Sticky Notes (Whiteboard)')
+				.setValue(board.theme || 'sticky-notes')
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { theme: value as any });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		// Show Card Colors
+		new Setting(contentDiv)
+			.setName('Show card colors')
+			.setDesc('Display individual card colors. When off, all cards use the default style.')
+			.addToggle(toggle => toggle
+				.setValue(board.showCardColors ?? true)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { showCardColors: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
 		// Column Backgrounds
 		new Setting(contentDiv)
 			.setName('Distinct Column Backgrounds')
@@ -434,19 +460,6 @@ export class KanbanSettingTab extends PluginSettingTab {
 	private displayGlobalSettings(containerEl: HTMLElement): void {
 		const globalSection = containerEl.createDiv({ cls: 'setting-section' });
 		globalSection.createEl('h3', { text: 'Global Settings' });
-
-		new Setting(globalSection)
-			.setName('Theme')
-			.setDesc('Choose the visual theme for your kanban boards')
-			.addDropdown(dropdown => dropdown
-				.addOption('default', 'Default (Modern)')
-				.addOption('sticky-notes', 'Sticky Notes (Whiteboard)')
-				.setValue(this.plugin.settings.theme || 'default')
-				.onChange(async (value) => {
-					this.plugin.settings.theme = value as any;
-					await this.plugin.saveSettings();
-					this.plugin.refreshAllViews();
-				}));
 
 		new Setting(globalSection)
 			.setName('Auto-refresh')

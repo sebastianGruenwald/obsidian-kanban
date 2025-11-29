@@ -31,8 +31,10 @@
       "sortBy": "priority",
       "sortOrder": "desc",
       "cardDensity": "comfortable",
-      "showColumnBackgrounds": false,
-      "colorfulHeaders": false
+      "showColumnBackgrounds": true,
+      "colorfulHeaders": false,
+      "theme": "sticky-notes",
+      "showCardColors": true
     }
   ],
   "activeBoard": "default",
@@ -46,5 +48,6 @@
     "tags",
     "priority"
   ],
-  "theme": "default"
+  "theme": "sticky-notes",
+  "showCardColors": true
 }

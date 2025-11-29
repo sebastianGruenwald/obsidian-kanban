@@ -86,7 +86,7 @@ export class KanbanView extends ItemView {
 		
 		// Apply theme class
 		kanbanContainer.removeClass('theme-default', 'theme-sticky-notes');
-		kanbanContainer.addClass(`theme-${this.plugin.settings.theme || 'default'}`);
+		kanbanContainer.addClass(`theme-${this.currentBoard?.theme || 'sticky-notes'}`);
 		
 		if (this.currentBoard?.showColumnBackgrounds) {
 			kanbanContainer.addClass('distinct-columns');

@@ -61,7 +61,8 @@ export class KanbanColumnComponent {
 				this.callbacks.onDragEnd,
 				this.callbacks.onCardArchive,
 				this.dataManager,
-				this.callbacks.onNewCard
+				this.callbacks.onNewCard,
+				this.boardConfig.showCardColors ?? true
 			);
 		}
 
@@ -203,15 +204,18 @@ export class KanbanColumnComponent {
 		if (this.isCreatingCard || !this.contentEl) return;
 		this.isCreatingCard = true;
 
-		// Pre-select a random color for this card
+		// Pre-select a random color for this card (only if colors are enabled)
+		const showColors = this.boardConfig.showCardColors ?? true;
 		const cardColor = getRandomCardColor();
 
 		// Create a new card element with an input - insert at TOP
 		const newCardEl = document.createElement('div');
 		newCardEl.className = 'kanban-card kanban-card-new';
 		
-		// Apply the random color immediately so it shows while typing
-		newCardEl.setAttribute('data-card-color', cardColor);
+		// Apply the random color immediately so it shows while typing (only if colors enabled)
+		if (showColors) {
+			newCardEl.setAttribute('data-card-color', cardColor);
+		}
 		
 		// Insert at the beginning of the content
 		if (this.contentEl.firstChild) {
