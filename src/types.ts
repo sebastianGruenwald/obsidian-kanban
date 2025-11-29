@@ -53,7 +53,7 @@ export const DEFAULT_SETTINGS: KanbanSettings = {
 	showFileCount: true,
 	cardTemplate: '',
 	defaultVisibleProperties: ['title', 'created', 'modified'],
-	theme: 'default'
+	theme: 'sticky-notes'
 };
 
 export interface KanbanCard {
