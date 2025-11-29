@@ -110,12 +110,24 @@ export class KanbanView extends ItemView {
 		sortContainer.createEl('label', { text: 'Sort:', cls: 'kanban-sort-label' });
 		
 		const sortSelect = sortContainer.createEl('select', { cls: 'kanban-sort-selector' });
+		
+		// Standard sort options
 		const sortOptions = [
 			{ value: 'none', text: 'No sorting' },
 			{ value: 'creation', text: 'Created' },
 			{ value: 'modification', text: 'Modified' },
 			{ value: 'title', text: 'Title' }
 		];
+
+		// Add visible properties to sort options
+		if (this.currentBoard?.visibleProperties) {
+			this.currentBoard.visibleProperties.forEach(prop => {
+				// Skip standard properties that are already covered or not sortable in a simple way
+				if (!['title', 'created', 'modified', 'tags'].includes(prop)) {
+					sortOptions.push({ value: prop, text: prop });
+				}
+			});
+		}
 		
 		sortOptions.forEach(option => {
 			const optionEl = sortSelect.createEl('option', { 

@@ -81,6 +81,18 @@ export class DataManager {
 				case 'title':
 					comparison = a.title.localeCompare(b.title);
 					break;
+				default:
+					// Sort by frontmatter property
+					const prop = this.boardConfig.sortBy;
+					const valA = a.frontmatter[prop];
+					const valB = b.frontmatter[prop];
+					
+					if (valA === valB) comparison = 0;
+					else if (valA === undefined || valA === null) comparison = -1;
+					else if (valB === undefined || valB === null) comparison = 1;
+					else if (typeof valA === 'number' && typeof valB === 'number') comparison = valA - valB;
+					else comparison = String(valA).localeCompare(String(valB));
+					break;
 			}
 
 			return this.boardConfig.sortOrder === 'desc' ? -comparison : comparison;

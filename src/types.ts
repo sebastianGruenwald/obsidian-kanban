@@ -8,7 +8,7 @@ export interface BoardConfig {
 	columnWidths: Record<string, number>;
 	columnOrder: string[];
 	visibleProperties: string[];
-	sortBy: 'creation' | 'modification' | 'title' | 'none';
+	sortBy: 'creation' | 'modification' | 'title' | 'none' | string;
 	sortOrder: 'asc' | 'desc';
 }
 

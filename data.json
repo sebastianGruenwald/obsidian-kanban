@@ -30,8 +30,8 @@
         "tags",
         "priority"
       ],
-      "sortBy": "creation",
-      "sortOrder": "desc"
+      "sortBy": "priority",
+      "sortOrder": "asc"
     }
   ],
   "activeBoard": "default",
