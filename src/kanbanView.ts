@@ -98,7 +98,10 @@ export class KanbanView extends ItemView {
 		
 		// Filter cards based on search query
 		const filteredCards = this.searchQuery 
-			? this.cards.filter(card => card.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
+			? this.cards.filter(card => 
+				card.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+				card.content.toLowerCase().includes(this.searchQuery.toLowerCase())
+			)
 			: this.cards;
 
 		// Create columns
