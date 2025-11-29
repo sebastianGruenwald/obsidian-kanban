@@ -88,6 +88,19 @@ export class KanbanView extends ItemView {
 		kanbanContainer.removeClass('theme-default', 'theme-sticky-notes');
 		kanbanContainer.addClass(`theme-${this.currentBoard?.theme || 'sticky-notes'}`);
 		
+		// Apply custom font if set for this theme
+		const currentTheme = this.currentBoard?.theme || 'sticky-notes';
+		const themeFonts = this.currentBoard?.themeFonts || { 'default': '', 'sticky-notes': '' };
+		const customFont = themeFonts[currentTheme] || '';
+		
+		if (customFont) {
+			kanbanContainer.style.setProperty('--kanban-custom-font', customFont);
+			kanbanContainer.addClass('has-custom-font');
+		} else {
+			kanbanContainer.style.removeProperty('--kanban-custom-font');
+			kanbanContainer.removeClass('has-custom-font');
+		}
+		
 		if (this.currentBoard?.showColumnBackgrounds) {
 			kanbanContainer.addClass('distinct-columns');
 		} else {

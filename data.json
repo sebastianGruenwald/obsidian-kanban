@@ -34,7 +34,11 @@
       "showColumnBackgrounds": true,
       "colorfulHeaders": false,
       "theme": "sticky-notes",
-      "showCardColors": true
+      "showCardColors": true,
+      "themeFonts": {
+        "default": "var(--font-interface)",
+        "sticky-notes": "Caveat, cursive"
+      }
     }
   ],
   "activeBoard": "default",

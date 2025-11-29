@@ -16,6 +16,9 @@
   --k-border-subtle: var(--background-modifier-border);
   --k-border-focus: var(--interactive-accent);
   
+  /* --- Custom Font (set via JS) --- */
+  --kanban-custom-font: inherit;
+  
   /* --- Spacing System --- */
   --k-space-2xs: 2px;
   --k-space-xs: 4px;
@@ -859,4 +862,21 @@
 
 .theme-dark .kanban-color-option:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Custom Font Support
+   ========================================================================== */
+
+/* Apply custom font when set */
+.kanban-board.has-custom-font .kanban-card-title,
+.kanban-board.has-custom-font .kanban-card-body,
+.kanban-board.has-custom-font .kanban-card-footer,
+.kanban-board.has-custom-font .kanban-card-tag,
+.kanban-board.has-custom-font .kanban-card-property,
+.kanban-board.has-custom-font .kanban-column-title,
+.kanban-board.has-custom-font .kanban-column-count,
+.kanban-board.has-custom-font .kanban-card-title-input,
+.kanban-board.has-custom-font .kanban-card-date {
+  font-family: var(--kanban-custom-font) !important;
 }
