@@ -1,12 +1,14 @@
 import { App, Menu, setIcon } from 'obsidian';
 import { KanbanCard, BoardConfig } from '../types';
 import { KanbanCardComponent } from './KanbanCardComponent';
-import { CreateCardModal, RenameColumnModal } from '../modals';
+import { RenameColumnModal, getRandomCardColor } from '../modals';
 import KanbanPlugin from '../main';
 import { DataManager } from '../dataManager';
 
 export class KanbanColumnComponent {
 	private element: HTMLElement;
+	private contentEl: HTMLElement | null = null;
+	private isCreatingCard: boolean = false;
 
 	constructor(
 		private app: App,
@@ -41,10 +43,10 @@ export class KanbanColumnComponent {
 		this.renderHeader(column);
 		
 		// Column content
-		const content = column.createDiv({ cls: 'kanban-column-content' });
+		this.contentEl = column.createDiv({ cls: 'kanban-column-content' });
 		
 		// Make column droppable
-		this.makeDroppable(content);
+		this.makeDroppable(this.contentEl);
 		
 		// Add cards
 		for (const card of this.cards) {
@@ -52,12 +54,14 @@ export class KanbanColumnComponent {
 				this.app,
 				card,
 				this.boardConfig,
-				content,
+				this.contentEl,
 				this.allColumns,
 				this.callbacks.onCardMove,
 				this.callbacks.onDragStart,
 				this.callbacks.onDragEnd,
-				this.callbacks.onCardArchive
+				this.callbacks.onCardArchive,
+				this.dataManager,
+				this.callbacks.onNewCard
 			);
 		}
 
@@ -84,9 +88,7 @@ export class KanbanColumnComponent {
 		setIcon(addBtn, 'plus');
 		
 		addBtn.addEventListener('click', () => {
-			new CreateCardModal(this.app, this.dataManager, this.columnName, () => {
-				this.callbacks.onNewCard();
-			}).open();
+			this.startInlineCardCreation();
 		});
 
 		// Column options button
@@ -195,5 +197,98 @@ export class KanbanColumnComponent {
 				return closest;
 			}
 		}, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+	}
+
+	private startInlineCardCreation(): void {
+		if (this.isCreatingCard || !this.contentEl) return;
+		this.isCreatingCard = true;
+
+		// Pre-select a random color for this card
+		const cardColor = getRandomCardColor();
+
+		// Create a new card element with an input - insert at TOP
+		const newCardEl = document.createElement('div');
+		newCardEl.className = 'kanban-card kanban-card-new';
+		
+		// Apply the random color immediately so it shows while typing
+		newCardEl.setAttribute('data-card-color', cardColor);
+		
+		// Insert at the beginning of the content
+		if (this.contentEl.firstChild) {
+			this.contentEl.insertBefore(newCardEl, this.contentEl.firstChild);
+		} else {
+			this.contentEl.appendChild(newCardEl);
+		}
+		
+		// Apply density class
+		if (this.boardConfig.cardDensity) {
+			newCardEl.addClass(`density-${this.boardConfig.cardDensity}`);
+		} else {
+			newCardEl.addClass('density-comfortable');
+		}
+
+		// Create input field
+		const inputEl = newCardEl.createEl('input', {
+			cls: 'kanban-card-title-input',
+			attr: {
+				type: 'text',
+				placeholder: 'Card title...'
+			}
+		});
+
+		// Focus the input
+		setTimeout(() => inputEl.focus(), 0);
+
+		// Handle Enter key
+		inputEl.addEventListener('keydown', async (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				const title = inputEl.value.trim();
+				if (title) {
+					await this.createCard(title, newCardEl);
+				} else {
+					this.cancelInlineCardCreation(newCardEl);
+				}
+			} else if (e.key === 'Escape') {
+				this.cancelInlineCardCreation(newCardEl);
+			}
+		});
+
+		// Handle blur (clicking away)
+		inputEl.addEventListener('blur', async () => {
+			// Small delay to allow Enter key to be processed first
+			setTimeout(async () => {
+				if (this.isCreatingCard && newCardEl.parentNode) {
+					const title = inputEl.value.trim();
+					if (title) {
+						await this.createCard(title, newCardEl);
+					} else {
+						this.cancelInlineCardCreation(newCardEl);
+					}
+				}
+			}, 100);
+		});
+
+		// Scroll to the new card
+		newCardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+	}
+
+	private async createCard(title: string, cardEl: HTMLElement): Promise<void> {
+		try {
+			const cardColor = cardEl.getAttribute('data-card-color') || undefined;
+			await this.dataManager.createNewCard(this.columnName, title, cardColor);
+			this.isCreatingCard = false;
+			cardEl.remove();
+			this.callbacks.onNewCard();
+		} catch (error) {
+			console.error('Error creating card:', error);
+			this.isCreatingCard = false;
+			cardEl.remove();
+		}
+	}
+
+	private cancelInlineCardCreation(cardEl: HTMLElement): void {
+		this.isCreatingCard = false;
+		cardEl.remove();
 	}
 }

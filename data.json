@@ -28,7 +28,7 @@
         "tags",
         "priority"
       ],
-      "sortBy": "modification",
+      "sortBy": "priority",
       "sortOrder": "desc",
       "cardDensity": "comfortable",
       "showColumnBackgrounds": false,
@@ -46,5 +46,5 @@
     "tags",
     "priority"
   ],
-  "theme": "sticky-notes"
+  "theme": "default"
 }

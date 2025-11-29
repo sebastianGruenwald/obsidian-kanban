@@ -1,8 +1,11 @@
 import { App, Menu, TFile, setIcon } from 'obsidian';
 import { KanbanCard, BoardConfig } from '../types';
+import { DataManager } from '../dataManager';
+import { ColorPickerModal } from '../modals';
 
 export class KanbanCardComponent {
 	private element: HTMLElement;
+	private isEditing: boolean = false;
 
 	constructor(
 		private app: App,
@@ -13,7 +16,9 @@ export class KanbanCardComponent {
 		private onMove: (filePath: string, newColumn: string) => void,
 		private onDragStart: (e: DragEvent, card: KanbanCard, element: HTMLElement) => void,
 		private onDragEnd: () => void,
-		private onArchive: (card: KanbanCard) => void
+		private onArchive: (card: KanbanCard) => void,
+		private dataManager?: DataManager,
+		private onTitleChange?: () => void
 	) {
 		this.element = this.render();
 	}
@@ -26,6 +31,12 @@ export class KanbanCardComponent {
 			cardEl.addClass(`density-${this.boardConfig.cardDensity}`);
 		} else {
 			cardEl.addClass('density-comfortable');
+		}
+
+		// Apply card color from frontmatter
+		const cardColor = this.card.frontmatter?.cardColor;
+		if (cardColor) {
+			cardEl.setAttribute('data-card-color', cardColor);
 		}
 
 		cardEl.setAttribute('data-file-path', this.card.file);
@@ -44,8 +55,18 @@ export class KanbanCardComponent {
 		this.renderCardContent(cardEl);
 		
 		// Click to open file
-		cardEl.addEventListener('click', () => {
-			this.openFile(this.card.file);
+		cardEl.addEventListener('click', (e) => {
+			// Don't open file if we're editing
+			if (!this.isEditing) {
+				this.openFile(this.card.file);
+			}
+		});
+		
+		// Double-click to edit title
+		cardEl.addEventListener('dblclick', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.startTitleEdit(cardEl);
 		});
 		
 		// Right-click context menu
@@ -155,6 +176,27 @@ export class KanbanCardComponent {
 					}
 				});
 		});
+
+		menu.addItem((item) => {
+			item.setTitle('Edit title')
+				.setIcon('pencil')
+				.onClick(() => this.startTitleEdit(this.element));
+		});
+
+		menu.addItem((item) => {
+			item.setTitle('Change color')
+				.setIcon('palette')
+				.onClick(() => {
+					new ColorPickerModal(
+						this.app,
+						this.card.file,
+						this.card.frontmatter?.cardColor,
+						(newColor) => {
+							this.element.setAttribute('data-card-color', newColor);
+						}
+					).open();
+				});
+		});
 		
 		menu.addSeparator();
 		
@@ -178,5 +220,71 @@ export class KanbanCardComponent {
 		});
 		
 		menu.showAtMouseEvent(event);
+	}
+
+	private startTitleEdit(cardEl: HTMLElement): void {
+		if (this.isEditing || !this.dataManager) return;
+		this.isEditing = true;
+
+		const titleEl = cardEl.querySelector('.kanban-card-title') as HTMLElement;
+		if (!titleEl) {
+			this.isEditing = false;
+			return;
+		}
+
+		const currentTitle = this.card.title;
+		const originalHtml = titleEl.innerHTML;
+
+		// Replace title with input
+		titleEl.empty();
+		const inputEl = titleEl.createEl('input', {
+			cls: 'kanban-card-title-input',
+			attr: {
+				type: 'text',
+				value: currentTitle
+			}
+		});
+
+		// Prevent click from bubbling (opening file)
+		inputEl.addEventListener('click', (e) => e.stopPropagation());
+
+		setTimeout(() => {
+			inputEl.focus();
+			inputEl.select();
+		}, 0);
+
+		const finishEdit = async (save: boolean) => {
+			if (!this.isEditing) return;
+			this.isEditing = false;
+
+			const newTitle = inputEl.value.trim();
+
+			if (save && newTitle && newTitle !== currentTitle && this.dataManager) {
+				try {
+					await this.dataManager.updateCardTitle(this.card.file, newTitle);
+					if (this.onTitleChange) {
+						this.onTitleChange();
+					}
+				} catch (error) {
+					// Restore original on error
+					titleEl.innerHTML = originalHtml;
+				}
+			} else {
+				titleEl.innerHTML = originalHtml;
+			}
+		};
+
+		inputEl.addEventListener('keydown', async (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				await finishEdit(true);
+			} else if (e.key === 'Escape') {
+				await finishEdit(false);
+			}
+		});
+
+		inputEl.addEventListener('blur', async () => {
+			setTimeout(() => finishEdit(true), 100);
+		});
 	}
 }

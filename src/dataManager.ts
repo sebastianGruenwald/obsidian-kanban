@@ -2,6 +2,7 @@ import { App, TFile } from 'obsidian';
 import { KanbanCard, BoardConfig, KanbanSettings } from './types';
 import { getAllTags, sanitizeFileName, showError } from './utils';
 import { DEFAULTS } from './constants';
+import { getRandomCardColor } from './modals';
 
 export class DataManager {
 	constructor(
@@ -158,7 +159,7 @@ export class DataManager {
 		}
 	}
 
-	async createNewCard(columnName: string, title: string): Promise<void> {
+	async createNewCard(columnName: string, title: string, cardColor?: string): Promise<void> {
 		try {
 			const sanitizedTitle = sanitizeFileName(title);
 			if (!sanitizedTitle) {
@@ -196,9 +197,13 @@ export class DataManager {
 			
 			const newFile = await this.app.vault.create(filePath, content);
 
+			// Use provided color or generate a random one
+			const finalCardColor = cardColor || getRandomCardColor();
+
 			// Then use processFrontMatter to set metadata safely
 			await this.app.fileManager.processFrontMatter(newFile, (frontmatter) => {
 				frontmatter[this.boardConfig.columnProperty] = columnName;
+				frontmatter['cardColor'] = finalCardColor;
 				
 				// Ensure tag exists in frontmatter tags if not in content
 				// Note: This is a simple way to add the tag. 
@@ -224,6 +229,29 @@ export class DataManager {
 			console.error('Error creating new card:', error);
 			const message = error instanceof Error ? error.message : 'Unknown error';
 			showError(`Failed to create card: ${message}`);
+			throw error;
+		}
+	}
+
+	async updateCardTitle(cardPath: string, newTitle: string): Promise<void> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(cardPath);
+			if (!(file instanceof TFile)) {
+				throw new Error('File not found');
+			}
+
+			// Rename the file
+			const sanitizedTitle = sanitizeFileName(newTitle);
+			if (!sanitizedTitle) {
+				throw new Error('Invalid card title');
+			}
+
+			const newPath = file.path.replace(file.name, `${sanitizedTitle}.md`);
+			await this.app.fileManager.renameFile(file, newPath);
+		} catch (error) {
+			console.error('Error updating card title:', error);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			showError(`Failed to rename card: ${message}`);
 			throw error;
 		}
 	}

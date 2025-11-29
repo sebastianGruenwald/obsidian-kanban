@@ -1,7 +1,93 @@
-import { App, Modal, Setting, TextComponent } from 'obsidian';
+import { App, Modal, Setting, TextComponent, TFile } from 'obsidian';
 import { DataManager } from './dataManager';
 import KanbanPlugin from './main';
 import { validateBoardName, normalizeTag, showError, showSuccess } from './utils';
+
+/**
+ * Available card colors for sticky notes theme
+ */
+export const CARD_COLORS = [
+	{ name: 'Yellow', value: 'yellow', color: '#fff9b1' },
+	{ name: 'Pink', value: 'pink', color: '#ffb3ba' },
+	{ name: 'Blue', value: 'blue', color: '#bae1ff' },
+	{ name: 'Green', value: 'green', color: '#baffc9' },
+	{ name: 'Orange', value: 'orange', color: '#ffdfba' },
+	{ name: 'Purple', value: 'purple', color: '#e1baff' },
+	{ name: 'Coral', value: 'coral', color: '#ffb5a7' },
+	{ name: 'Mint', value: 'mint', color: '#b8f3d4' },
+	{ name: 'Lavender', value: 'lavender', color: '#d4c1ec' },
+	{ name: 'Peach', value: 'peach', color: '#ffd7ba' },
+	{ name: 'Sky', value: 'sky', color: '#a2d2ff' },
+	{ name: 'Lime', value: 'lime', color: '#d4fc79' }
+];
+
+/**
+ * Get a random card color value
+ */
+export function getRandomCardColor(): string {
+	return CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)].value;
+}
+
+/**
+ * Modal for selecting a card color
+ */
+export class ColorPickerModal extends Modal {
+	constructor(
+		app: App,
+		private filePath: string,
+		private currentColor: string | undefined,
+		private onSelect: (color: string) => void
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.addClass('kanban-color-picker-modal');
+		contentEl.createEl('h3', { text: 'Choose Card Color' });
+
+		const colorGrid = contentEl.createDiv({ cls: 'kanban-color-grid' });
+
+		for (const color of CARD_COLORS) {
+			const colorBtn = colorGrid.createDiv({ cls: 'kanban-color-option' });
+			colorBtn.style.backgroundColor = color.color;
+			colorBtn.setAttribute('title', color.name);
+			
+			if (this.currentColor === color.value) {
+				colorBtn.addClass('selected');
+			}
+
+			colorBtn.addEventListener('click', async () => {
+				await this.selectColor(color.value);
+			});
+		}
+	}
+
+	private async selectColor(colorValue: string): Promise<void> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(this.filePath);
+			if (!(file instanceof TFile)) {
+				showError('File not found');
+				return;
+			}
+
+			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				frontmatter['cardColor'] = colorValue;
+			});
+
+			this.onSelect(colorValue);
+			this.close();
+		} catch (error) {
+			console.error('Error changing card color:', error);
+			showError('Failed to change card color');
+		}
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
 
 /**
  * Modal for creating a new card
