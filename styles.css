@@ -2,39 +2,274 @@
    Obsidian Kanban - Premium Design System
    ========================================================================== */
 
+/* @settings
+
+name: Kanban Board
+id: obsidian-kanban
+settings:
+    -
+        id: kanban-theme-heading
+        title: Theme
+        type: heading
+        level: 1
+        collapsed: false
+    -
+        id: kanban-theme
+        title: Board Theme
+        description: Choose the visual style for your kanban board
+        type: class-select
+        allowEmpty: false
+        default: theme-sticky-notes
+        options:
+            -
+                label: Modern (Clean)
+                value: theme-default
+            -
+                label: Sticky Notes (Whiteboard)
+                value: theme-sticky-notes
+    -
+        id: kanban-fonts-heading
+        title: Fonts
+        type: heading
+        level: 1
+        collapsed: false
+    -
+        id: kanban-font-family
+        title: Card Font
+        description: Font family for card content
+        type: variable-select
+        default: inherit
+        options:
+            -
+                label: Theme Default
+                value: inherit
+            -
+                label: ⭐ Interface (System UI)
+                value: var(--font-interface)
+            -
+                label: ⭐ Text (Reading)
+                value: var(--font-text)
+            -
+                label: ⭐ Monospace (Code)
+                value: var(--font-monospace)
+            -
+                label: Caveat (Handwriting)
+                value: "'Caveat', cursive"
+            -
+                label: Comic Sans MS
+                value: "'Comic Sans MS', cursive"
+            -
+                label: Georgia
+                value: Georgia, serif
+            -
+                label: Times New Roman
+                value: "'Times New Roman', serif"
+            -
+                label: Arial
+                value: Arial, sans-serif
+            -
+                label: Helvetica
+                value: Helvetica, sans-serif
+            -
+                label: Verdana
+                value: Verdana, sans-serif
+            -
+                label: Segoe UI
+                value: "'Segoe UI', sans-serif"
+            -
+                label: Consolas
+                value: Consolas, monospace
+            -
+                label: Fira Code
+                value: "'Fira Code', monospace"
+    -
+        id: kanban-font-size-heading
+        title: Font Sizes
+        type: heading
+        level: 2
+        collapsed: true
+    -
+        id: kanban-card-title-size
+        title: Card Title Size
+        description: Font size for card titles
+        type: variable-number-slider
+        default: 0.95
+        min: 0.7
+        max: 1.5
+        step: 0.05
+        format: rem
+    -
+        id: kanban-card-body-size
+        title: Card Body Size
+        description: Font size for card body content
+        type: variable-number-slider
+        default: 0.85
+        min: 0.6
+        max: 1.3
+        step: 0.05
+        format: rem
+    -
+        id: kanban-column-title-size
+        title: Column Title Size
+        description: Font size for column headers
+        type: variable-number-slider
+        default: 1
+        min: 0.8
+        max: 1.5
+        step: 0.05
+        format: rem
+    -
+        id: kanban-tag-size
+        title: Tag Size
+        description: Font size for tags
+        type: variable-number-slider
+        default: 0.7
+        min: 0.5
+        max: 1
+        step: 0.05
+        format: rem
+    -
+        id: kanban-colors-heading
+        title: Colors
+        type: heading
+        level: 1
+        collapsed: true
+    -
+        id: kanban-accent-color
+        title: Accent Color
+        description: Primary accent color for interactive elements
+        type: variable-themed-color
+        format: hex
+        default-light: '#007AFF'
+        default-dark: '#5ac8fa'
+    -
+        id: kanban-card-bg
+        title: Card Background
+        description: Background color for cards (Modern theme)
+        type: variable-themed-color
+        format: hex
+        opacity: true
+        default-light: '#ffffff'
+        default-dark: '#2d2d2d'
+    -
+        id: kanban-layout-heading
+        title: Layout
+        type: heading
+        level: 1
+        collapsed: true
+    -
+        id: kanban-column-min-width
+        title: Column Minimum Width
+        description: Minimum width for columns
+        type: variable-number-slider
+        default: 200
+        min: 150
+        max: 400
+        step: 10
+        format: px
+    -
+        id: kanban-column-max-width
+        title: Column Maximum Width
+        description: Maximum width for columns
+        type: variable-number-slider
+        default: 400
+        min: 250
+        max: 600
+        step: 10
+        format: px
+    -
+        id: kanban-column-gap
+        title: Column Gap
+        description: Space between columns
+        type: variable-number-slider
+        default: 16
+        min: 8
+        max: 32
+        step: 2
+        format: px
+    -
+        id: kanban-card-gap
+        title: Card Gap
+        description: Space between cards
+        type: variable-number-slider
+        default: 8
+        min: 4
+        max: 16
+        step: 2
+        format: px
+    -
+        id: kanban-card-padding
+        title: Card Padding
+        description: Padding inside cards
+        type: variable-number-slider
+        default: 12
+        min: 6
+        max: 24
+        step: 2
+        format: px
+    -
+        id: kanban-effects-heading
+        title: Effects
+        type: heading
+        level: 1
+        collapsed: true
+    -
+        id: kanban-card-radius
+        title: Card Border Radius
+        description: Roundness of card corners
+        type: variable-number-slider
+        default: 10
+        min: 0
+        max: 20
+        step: 1
+        format: px
+    -
+        id: kanban-show-card-shadows
+        title: Card Shadows
+        description: Show shadows on cards
+        type: class-toggle
+        default: true
+
+*/
+
 :root {
   /* --- Semantic Colors --- */
   --k-bg-board: var(--background-primary);
   --k-bg-column: var(--background-secondary);
-  --k-bg-card: var(--background-primary-alt);
+  --k-bg-card: var(--kanban-card-bg, var(--background-primary-alt));
   --k-bg-card-hover: var(--background-primary);
   
   --k-text-title: var(--text-normal);
   --k-text-muted: var(--text-muted);
-  --k-text-accent: var(--interactive-accent);
+  --k-text-accent: var(--kanban-accent-color, var(--interactive-accent));
   
   --k-border-subtle: var(--background-modifier-border);
-  --k-border-focus: var(--interactive-accent);
+  --k-border-focus: var(--kanban-accent-color, var(--interactive-accent));
   
-  /* --- Custom Font (set via JS) --- */
-  --kanban-custom-font: inherit;
+  /* --- Font Settings (Style Settings compatible) --- */
+  --kanban-custom-font: var(--kanban-font-family, inherit);
+  --k-font-card-title: var(--kanban-card-title-size, 0.95rem);
+  --k-font-card-body: var(--kanban-card-body-size, 0.85rem);
+  --k-font-column-title: var(--kanban-column-title-size, 1rem);
+  --k-font-tag: var(--kanban-tag-size, 0.7rem);
   
-  /* --- Spacing System --- */
+  /* --- Spacing System (Style Settings compatible) --- */
   --k-space-2xs: 2px;
   --k-space-xs: 4px;
   --k-space-sm: 8px;
-  --k-space-md: 12px;
+  --k-space-md: var(--kanban-card-padding, 12px);
   --k-space-lg: 16px;
   --k-space-xl: 24px;
   
-  /* --- Layout --- */
-  --k-column-width: 280px;
-  --k-column-gap: var(--k-space-lg);
-  --k-card-gap: var(--k-space-sm);
+  /* --- Layout (Style Settings compatible) --- */
+  --k-column-min-width: var(--kanban-column-min-width, 200px);
+  --k-column-max-width: var(--kanban-column-max-width, 400px);
+  --k-column-gap: var(--kanban-column-gap, 16px);
+  --k-card-gap: var(--kanban-card-gap, 8px);
   
-  /* --- Effects --- */
+  /* --- Effects (Style Settings compatible) --- */
   --k-radius-sm: 6px;
-  --k-radius-md: 10px;
+  --k-radius-md: var(--kanban-card-radius, 10px);
   --k-radius-lg: 16px;
   
   --k-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -67,6 +302,26 @@
 /* ==========================================================================
    Board Layout
    ========================================================================== */
+
+/* Card shadows toggle (controlled by Style Settings) */
+body:not(.kanban-show-card-shadows) .kanban-card {
+  box-shadow: none !important;
+}
+
+body:not(.kanban-show-card-shadows) .kanban-card:hover {
+  box-shadow: none !important;
+}
+
+/* Default: shadows enabled */
+body.kanban-show-card-shadows .kanban-card,
+body:not([class*="kanban-show-card-shadows"]) .kanban-card {
+  box-shadow: var(--k-shadow-card);
+}
+
+body.kanban-show-card-shadows .kanban-card:hover,
+body:not([class*="kanban-show-card-shadows"]) .kanban-card:hover {
+  box-shadow: var(--k-shadow-card-hover);
+}
 
 .kanban-view-content {
   padding: 0 !important;
@@ -152,14 +407,27 @@
   background-color: var(--k-bg-board);
 }
 
+/* Apply global font from Style Settings */
+.kanban-board .kanban-card-title,
+.kanban-board .kanban-card-body,
+.kanban-board .kanban-card-footer,
+.kanban-board .kanban-card-tag,
+.kanban-board .kanban-card-property,
+.kanban-board .kanban-column-title,
+.kanban-board .kanban-column-count,
+.kanban-board .kanban-card-title-input,
+.kanban-board .kanban-card-date {
+  font-family: var(--kanban-custom-font);
+}
+
 /* ==========================================================================
    Columns
    ========================================================================== */
 
 .kanban-column {
   flex: 1 1 0;
-  min-width: 200px;
-  max-width: 400px;
+  min-width: var(--k-column-min-width);
+  max-width: var(--k-column-max-width);
   display: flex;
   flex-direction: column;
   max-height: 100%;
@@ -212,7 +480,7 @@
 
 .kanban-column-title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--k-font-column-title);
   color: var(--k-text-title);
   white-space: nowrap;
   overflow: hidden;
@@ -346,7 +614,7 @@
 
 /* --- Card Content --- */
 .kanban-card-title {
-  font-size: 0.95rem;
+  font-size: var(--k-font-card-title);
   font-weight: 500;
   line-height: 1.4;
   color: var(--k-text-title);
@@ -398,6 +666,7 @@
   flex-direction: column;
   gap: var(--k-space-xs);
   margin-top: var(--k-space-sm);
+  font-size: var(--k-font-card-body);
 }
 
 .kanban-card-tags-container {
@@ -408,7 +677,7 @@
 
 /* --- Tags & Pills --- */
 .kanban-card-tag {
-  font-size: 0.7rem;
+  font-size: var(--k-font-tag);
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 12px;
@@ -865,10 +1134,10 @@
 }
 
 /* ==========================================================================
-   Custom Font Support
+   Per-Board Custom Font Override
+   When set via board settings, overrides Style Settings font
    ========================================================================== */
 
-/* Apply custom font when set */
 .kanban-board.has-custom-font .kanban-card-title,
 .kanban-board.has-custom-font .kanban-card-body,
 .kanban-board.has-custom-font .kanban-card-footer,

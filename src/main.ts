@@ -6,6 +6,13 @@ import { BoardManager } from './boardManager';
 import { debounce, getAllTags, showError, showInfo } from './utils';
 import { DEFAULTS, KEYBOARD_SHORTCUTS, ICONS } from './constants';
 
+// Extend the App interface to include the trigger method for style-settings
+declare module 'obsidian' {
+	interface Workspace {
+		trigger(name: 'parse-style-settings'): void;
+	}
+}
+
 export default class KanbanPlugin extends Plugin {
 	settings!: KanbanSettings;
 	boardManager!: BoardManager;
@@ -107,6 +114,9 @@ export default class KanbanPlugin extends Plugin {
 
 		// Register settings tab
 		this.addSettingTab(new KanbanSettingTab(this.app, this));
+
+		// Notify Style Settings plugin that we have settings to parse
+		this.app.workspace.trigger('parse-style-settings');
 
 		// Auto-refresh on file changes
 		if (this.settings.autoRefresh) {

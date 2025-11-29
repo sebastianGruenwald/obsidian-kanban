@@ -193,7 +193,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 		// Theme
 		new Setting(contentDiv)
 			.setName('Theme')
-			.setDesc('Choose the visual theme for this board')
+			.setDesc('Visual theme for this board. Use Style Settings plugin for global defaults.')
 			.addDropdown(dropdown => dropdown
 				.addOption('default', 'Modern')
 				.addOption('sticky-notes', 'Sticky Notes (Whiteboard)')
@@ -212,11 +212,11 @@ export class KanbanSettingTab extends PluginSettingTab {
 		const currentFont = themeFonts[currentTheme] || '';
 		
 		new Setting(contentDiv)
-			.setName(`Font (${currentTheme === 'sticky-notes' ? 'Sticky Notes' : 'Modern'} theme)`)
-			.setDesc('Choose the font for this theme. Obsidian default fonts are marked with ⭐')
+			.setName(`Font override (${currentTheme === 'sticky-notes' ? 'Sticky Notes' : 'Modern'} theme)`)
+			.setDesc('Override font for this board. Leave as "Use Style Settings Default" to use global settings.')
 			.addDropdown(dropdown => {
-				// Default option
-				dropdown.addOption('', '— Theme Default —');
+				// Default option - uses Style Settings
+				dropdown.addOption('', '— Use Style Settings Default —');
 				
 				// Obsidian-recommended fonts (starred)
 				dropdown.addOption('__separator1__', '── ⭐ Obsidian Fonts ──');
