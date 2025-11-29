@@ -253,70 +253,161 @@
 .kanban-card {
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 12px;
     margin-bottom: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .kanban-card:hover {
     border-color: var(--interactive-accent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .kanban-card.dragging {
     opacity: 0.6;
     transform: rotate(2deg) scale(0.95);
     z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .kanban-card-title {
-    font-weight: 500;
-    margin-bottom: 8px;
-    word-wrap: break-word;
+    font-weight: 600;
+    font-size: 1em;
     line-height: 1.4;
     color: var(--text-normal);
+    word-wrap: break-word;
 }
 
-.kanban-card-meta {
-    font-size: 0.8em;
-    color: var(--text-muted);
-    border-top: 1px solid var(--background-modifier-border);
-    padding-top: 8px;
-    margin-top: 8px;
+/* Card Body (Tags & Properties) */
+.kanban-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.kanban-card-meta:empty {
+.kanban-card-body:empty {
     display: none;
 }
 
-.kanban-card-date, .kanban-card-tags, .kanban-card-property {
-    display: block;
-    margin-bottom: 4px;
-    line-height: 1.3;
+/* Tags */
+.kanban-card-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
-.kanban-card-date:last-child,
-.kanban-card-tags:last-child,
-.kanban-card-property:last-child {
-    margin-bottom: 0;
-}
-
-.kanban-card-tags {
-    font-style: italic;
-}
-
-.kanban-card-property {
-    font-family: var(--font-monospace);
+.kanban-card-tag {
     font-size: 0.75em;
     background: var(--background-modifier-border);
-    padding: 2px 4px;
-    border-radius: 3px;
-    display: inline-block;
-    margin-right: 4px;
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.kanban-card-tag:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* Properties */
+.kanban-card-property {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    background: var(--background-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.kanban-card-property-key {
+    font-weight: 600;
+    opacity: 0.8;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kanban-card-property-value {
+    color: var(--text-normal);
+    word-break: break-word;
+}
+
+/* Footer (Dates) */
+.kanban-card-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: 0.75em;
+    color: var(--text-muted);
+}
+
+.kanban-card-footer:empty {
+    display: none;
+}
+
+.kanban-card-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.kanban-card-date::before {
+    content: "📅"; /* Fallback icon */
+    font-size: 1em;
+    opacity: 0.7;
+}
+
+/* Density Variants */
+
+/* Compact */
+.kanban-card.density-compact {
+    padding: 8px;
+    gap: 4px;
+}
+
+.kanban-card.density-compact .kanban-card-title {
+    font-size: 0.95em;
+}
+
+.kanban-card.density-compact .kanban-card-property {
+    padding: 2px 6px;
+    font-size: 0.8em;
+}
+
+.kanban-card.density-compact .kanban-card-footer {
+    margin-top: 2px;
+    padding-top: 4px;
+}
+
+/* Spacious */
+.kanban-card.density-spacious {
+    padding: 16px;
+    gap: 12px;
+}
+
+.kanban-card.density-spacious .kanban-card-title {
+    font-size: 1.1em;
+    margin-bottom: 4px;
+}
+
+.kanban-card.density-spacious .kanban-card-tag {
+    padding: 4px 10px;
+}
+
+.kanban-card.density-spacious .kanban-card-property {
+    padding: 6px 10px;
 }
 
 .kanban-error {

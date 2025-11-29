@@ -175,6 +175,21 @@ export class KanbanSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllViews();
 				}));
 
+		// Card Density
+		new Setting(contentDiv)
+			.setName('Card Density')
+			.setDesc('Adjust the visual density of cards')
+			.addDropdown(dropdown => dropdown
+				.addOption('compact', 'Compact')
+				.addOption('comfortable', 'Comfortable')
+				.addOption('spacious', 'Spacious')
+				.setValue(board.cardDensity || 'comfortable')
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { cardDensity: value as any });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
 		// Delete board button (only if more than one board exists)
 		const allBoards = this.plugin.boardManager.getAllBoards();
 		if (allBoards.length > 1) {

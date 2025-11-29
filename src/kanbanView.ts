@@ -348,6 +348,14 @@ export class KanbanView extends ItemView {
 
 	private createCard(container: HTMLElement, card: KanbanCard): void {
 		const cardEl = container.createDiv({ cls: 'kanban-card' });
+		
+		// Apply density class
+		if (this.currentBoard?.cardDensity) {
+			cardEl.addClass(`density-${this.currentBoard.cardDensity}`);
+		} else {
+			cardEl.addClass('density-comfortable');
+		}
+
 		cardEl.setAttribute('data-file-path', card.file);
 		
 		// Make card draggable
@@ -388,40 +396,42 @@ export class KanbanView extends ItemView {
 			cardEl.createDiv({ cls: 'kanban-card-title', text: card.title });
 		}
 
-		// Show other properties if configured
-		const meta = cardEl.createDiv({ cls: 'kanban-card-meta' });
-		
-		if (visibleProperties.includes('created') && card.created) {
-			meta.createSpan({ 
-				cls: 'kanban-card-date',
-				text: `Created: ${new Date(card.created).toLocaleDateString()}`
-			});
-		}
-
-		if (visibleProperties.includes('modified') && card.modified) {
-			meta.createSpan({ 
-				cls: 'kanban-card-date',
-				text: `Modified: ${new Date(card.modified).toLocaleDateString()}`
-			});
-		}
+		// Container for tags and properties
+		const body = cardEl.createDiv({ cls: 'kanban-card-body' });
 
 		if (visibleProperties.includes('tags') && card.frontmatter.tags) {
 			const tags = Array.isArray(card.frontmatter.tags) ? card.frontmatter.tags : [card.frontmatter.tags];
 			if (tags.length > 0) {
-				const tagsEl = meta.createSpan({ cls: 'kanban-card-tags' });
-				tagsEl.textContent = `Tags: ${tags.join(', ')}`;
+				const tagsContainer = body.createDiv({ cls: 'kanban-card-tags-container' });
+				tags.forEach((tag: string) => {
+					tagsContainer.createSpan({ cls: 'kanban-card-tag', text: tag.replace('#', '') });
+				});
 			}
 		}
 
 		// Show custom frontmatter properties
 		visibleProperties.forEach(prop => {
 			if (!['title', 'created', 'modified', 'tags'].includes(prop) && card.frontmatter[prop]) {
-				meta.createSpan({ 
-					cls: 'kanban-card-property',
-					text: `${prop}: ${card.frontmatter[prop]}`
-				});
+				const propEl = body.createDiv({ cls: 'kanban-card-property' });
+				propEl.createSpan({ cls: 'kanban-card-property-key', text: prop });
+				propEl.createSpan({ cls: 'kanban-card-property-value', text: String(card.frontmatter[prop]) });
 			}
 		});
+
+		// Footer for dates
+		const footer = cardEl.createDiv({ cls: 'kanban-card-footer' });
+		
+		if (visibleProperties.includes('created') && card.created) {
+			const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
+			dateEl.setAttribute('aria-label', 'Created');
+			dateEl.setText(new Date(card.created).toLocaleDateString());
+		}
+
+		if (visibleProperties.includes('modified') && card.modified) {
+			const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
+			dateEl.setAttribute('aria-label', 'Modified');
+			dateEl.setText(new Date(card.modified).toLocaleDateString());
+		}
 	}
 
 	private showColumnMenu(event: MouseEvent, columnName: string): void {

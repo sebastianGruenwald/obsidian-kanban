@@ -15,8 +15,9 @@
       ],
       "columnWidths": {
         "To Do": 344,
-        "In Progress": 343,
-        "Done": 519
+        "In Progress": 150,
+        "Done": 519,
+        "blocked": 354
       },
       "columnOrder": [
         "To Do",
@@ -31,7 +32,8 @@
         "priority"
       ],
       "sortBy": "priority",
-      "sortOrder": "asc"
+      "sortOrder": "asc",
+      "cardDensity": "comfortable"
     }
   ],
   "activeBoard": "default",

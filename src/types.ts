@@ -10,6 +10,7 @@ export interface BoardConfig {
 	visibleProperties: string[];
 	sortBy: 'creation' | 'modification' | 'title' | 'none' | string;
 	sortOrder: 'asc' | 'desc';
+	cardDensity: 'compact' | 'comfortable' | 'spacious';
 }
 
 export interface KanbanSettings {
@@ -32,7 +33,8 @@ export const DEFAULT_BOARD: BoardConfig = {
 	columnOrder: [],
 	visibleProperties: ['title', 'created'],
 	sortBy: 'creation',
-	sortOrder: 'desc'
+	sortOrder: 'desc',
+	cardDensity: 'comfortable'
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {
