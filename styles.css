@@ -141,17 +141,6 @@
   
   /* Soft Ambient Background */
   background-color: var(--k-bg-board);
-  background-image: 
-    radial-gradient(
-      circle at 50% 0%, 
-      color-mix(in srgb, var(--interactive-accent) 8%, transparent) 0%, 
-      transparent 60%
-    ),
-    linear-gradient(
-      to bottom,
-      var(--background-primary) 0%,
-      var(--background-secondary) 100%
-    );
 }
 
 /* ==========================================================================
