@@ -13,6 +13,7 @@ export class KanbanView extends ItemView {
 	private columns: string[] = [];
 	private draggedCard: HTMLElement | null = null;
 	private currentBoard: BoardConfig | null = null;
+	private resizingColumn: { name: string, startX: number, startWidth: number } | null = null;
 
 	constructor(leaf: WorkspaceLeaf, private plugin: KanbanPlugin) {
 		super(leaf);
@@ -22,7 +23,7 @@ export class KanbanView extends ItemView {
 	private updateCurrentBoard() {
 		this.currentBoard = this.plugin.boardManager.getBoard(this.plugin.settings.activeBoard);
 		if (this.currentBoard) {
-			this.dataManager = new DataManager(this.app, this.currentBoard);
+			this.dataManager = new DataManager(this.app, this.currentBoard, this.plugin.settings);
 		}
 	}
 
@@ -170,12 +171,23 @@ export class KanbanView extends ItemView {
 		const column = container.createDiv({ cls: 'kanban-column' });
 		column.setAttribute('data-column-name', columnName);
 		
+		// Apply custom width if set
+		if (this.currentBoard?.columnWidths && this.currentBoard.columnWidths[columnName]) {
+			// Set flex basis to custom width, allow shrinking but not growing beyond set width
+			column.style.flex = `0 1 ${this.currentBoard.columnWidths[columnName]}px`;
+		}
+		
 		// Column header
 		const header = column.createDiv({ cls: 'kanban-column-header' });
 		
 		// Make header draggable for column reordering
 		header.draggable = true;
 		header.addEventListener('dragstart', (e) => {
+			// Don't drag if resizing
+			if (this.resizingColumn) {
+				e.preventDefault();
+				return;
+			}
 			e.dataTransfer?.setData('text/column-name', columnName);
 			column.addClass('column-dragging');
 			
@@ -258,6 +270,14 @@ export class KanbanView extends ItemView {
 				text: ` (${cards.length})`
 			});
 		}
+
+		// Resize handle
+		const resizeHandle = column.createDiv({ cls: 'kanban-column-resize-handle' });
+		resizeHandle.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.startResizing(e, columnName, column);
+		});
 		
 		// Column content
 		const content = column.createDiv({ cls: 'kanban-column-content' });
@@ -269,6 +289,49 @@ export class KanbanView extends ItemView {
 		for (const card of cards) {
 			this.createCard(content, card);
 		}
+	}
+
+	private startResizing(e: MouseEvent, columnName: string, columnEl: HTMLElement): void {
+		this.resizingColumn = {
+			name: columnName,
+			startX: e.clientX,
+			startWidth: columnEl.offsetWidth
+		};
+
+		const onMouseMove = (e: MouseEvent) => {
+			if (!this.resizingColumn) return;
+			
+			const diff = e.clientX - this.resizingColumn.startX;
+			const newWidth = Math.max(150, this.resizingColumn.startWidth + diff); // Min width 150px
+			
+			// Update flex basis
+			columnEl.style.flex = `0 1 ${newWidth}px`;
+		};
+
+		const onMouseUp = async () => {
+			if (this.resizingColumn) {
+				// Get width from flex-basis or offsetWidth
+				const style = window.getComputedStyle(columnEl);
+				const flexBasis = style.flexBasis;
+				const finalWidth = flexBasis !== 'auto' ? parseInt(flexBasis) : columnEl.offsetWidth;
+				
+				// Save width
+				if (this.currentBoard) {
+					const columnWidths = this.currentBoard.columnWidths || {};
+					columnWidths[this.resizingColumn.name] = finalWidth;
+					this.plugin.boardManager.updateBoard(this.currentBoard.id, { columnWidths });
+					await this.plugin.saveSettings();
+				}
+				
+				this.resizingColumn = null;
+			}
+			
+			document.removeEventListener('mousemove', onMouseMove);
+			document.removeEventListener('mouseup', onMouseUp);
+		};
+
+		document.addEventListener('mousemove', onMouseMove);
+		document.addEventListener('mouseup', onMouseUp);
 	}
 
 	private createCard(container: HTMLElement, card: KanbanCard): void {

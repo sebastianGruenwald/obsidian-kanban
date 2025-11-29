@@ -1,0 +1,48 @@
+{
+  "boards": [
+    {
+      "id": "default",
+      "name": "Default Kanban",
+      "tagFilter": "#kanban",
+      "columnProperty": "status",
+      "defaultColumns": [
+        "To Do",
+        "In Progress",
+        "Done"
+      ],
+      "customColumns": [
+        "blocked"
+      ],
+      "columnWidths": {
+        "To Do": 344,
+        "In Progress": 343,
+        "Done": 519
+      },
+      "columnOrder": [
+        "To Do",
+        "In Progress",
+        "blocked",
+        "Done"
+      ],
+      "visibleProperties": [
+        "title",
+        "created",
+        "tags",
+        "priority"
+      ],
+      "sortBy": "creation",
+      "sortOrder": "desc"
+    }
+  ],
+  "activeBoard": "default",
+  "autoRefresh": true,
+  "showFileCount": true,
+  "cardTemplate": "",
+  "defaultVisibleProperties": [
+    "title",
+    "created",
+    "modified",
+    "tags",
+    "priority"
+  ]
+}

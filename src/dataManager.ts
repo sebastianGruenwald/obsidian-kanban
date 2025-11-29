@@ -1,10 +1,14 @@
 import { App, TFile } from 'obsidian';
-import { KanbanCard, BoardConfig } from './types';
+import { KanbanCard, BoardConfig, KanbanSettings } from './types';
 import { getAllTags, sanitizeFileName, showError } from './utils';
 import { DEFAULTS } from './constants';
 
 export class DataManager {
-	constructor(private app: App, private boardConfig: BoardConfig) {}
+	constructor(
+		private app: App, 
+		private boardConfig: BoardConfig,
+		private settings: KanbanSettings
+	) {}
 
 	async getKanbanCards(): Promise<KanbanCard[]> {
 		try {
@@ -138,7 +142,32 @@ export class DataManager {
 				[this.boardConfig.columnProperty]: columnName
 			};
 
-			const content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+			let content = '';
+			if (this.settings.cardTemplate) {
+				// Use template
+				const templateFile = this.app.vault.getAbstractFileByPath(this.settings.cardTemplate);
+				if (templateFile instanceof TFile) {
+					content = await this.app.vault.read(templateFile);
+					// Replace placeholders
+					content = content.replace(/{{title}}/g, title);
+					content = content.replace(/{{date}}/g, new Date().toISOString().split('T')[0]);
+					content = content.replace(/{{time}}/g, new Date().toLocaleTimeString());
+					
+					// Ensure frontmatter exists and has the column property
+					content = this.updateFrontmatterProperty(content, this.boardConfig.columnProperty, columnName);
+					
+					// Ensure tag exists
+					if (!content.includes(this.boardConfig.tagFilter)) {
+						content += `\n\n${this.boardConfig.tagFilter}`;
+					}
+				} else {
+					// Template file not found, fall back to default
+					content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+				}
+			} else {
+				// Default content
+				content = this.createFrontmatterContent(frontmatter) + `\n# ${title}\n\n${this.boardConfig.tagFilter}`;
+			}
 			
 			await this.app.vault.create(filePath, content);
 		} catch (error) {

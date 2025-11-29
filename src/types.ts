@@ -5,6 +5,7 @@ export interface BoardConfig {
 	columnProperty: string;
 	defaultColumns: string[];
 	customColumns: string[];
+	columnWidths: Record<string, number>;
 	columnOrder: string[];
 	visibleProperties: string[];
 	sortBy: 'creation' | 'modification' | 'title' | 'none';
@@ -16,6 +17,7 @@ export interface KanbanSettings {
 	activeBoard: string;
 	autoRefresh: boolean;
 	showFileCount: boolean;
+	cardTemplate: string;
 	defaultVisibleProperties: string[];
 }
 
@@ -26,6 +28,7 @@ export const DEFAULT_BOARD: BoardConfig = {
 	columnProperty: 'status',
 	defaultColumns: ['To Do', 'In Progress', 'Done'],
 	customColumns: [],
+	columnWidths: {},
 	columnOrder: [],
 	visibleProperties: ['title', 'created'],
 	sortBy: 'creation',
@@ -37,6 +40,7 @@ export const DEFAULT_SETTINGS: KanbanSettings = {
 	activeBoard: 'default',
 	autoRefresh: true,
 	showFileCount: true,
+	cardTemplate: '',
 	defaultVisibleProperties: ['title', 'created', 'modified']
 };
 

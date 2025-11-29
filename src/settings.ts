@@ -1,7 +1,8 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFile } from 'obsidian';
 import KanbanPlugin from './main';
 import { BoardConfig } from './types';
 import { CreateBoardModal, AddColumnModal } from './modals';
+import { DataManager } from './dataManager';
 
 export class KanbanSettingTab extends PluginSettingTab {
 	plugin: KanbanPlugin;
@@ -211,7 +212,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 					.setButtonText('Remove')
 					.setWarning()
 					.onClick(async () => {
-						this.plugin.boardManager.removeColumnFromBoard(board.name, column);
+						this.plugin.boardManager.removeColumnFromBoard(board.id, column);
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
 						this.display();
@@ -247,11 +248,80 @@ export class KanbanSettingTab extends PluginSettingTab {
 						const visibleProperties = value 
 							? [...board.visibleProperties, property]
 							: board.visibleProperties.filter(p => p !== property);
-						this.plugin.boardManager.updateBoard(board.name, { visibleProperties });
+						this.plugin.boardManager.updateBoard(board.id, { visibleProperties });
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
 					}));
 		});
+
+		// Add new property manually
+		new Setting(propertiesSection)
+			.setName('Add Custom Property')
+			.setDesc('Add a frontmatter property to the list')
+			.addText(text => text
+				.setPlaceholder('property_name')
+				.onChange(async (value) => {
+					// Just storing the value for the button
+					text.inputEl.setAttribute('data-value', value);
+				}))
+			.addButton(button => button
+				.setButtonText('Add')
+				.onClick(async () => {
+					const input = button.buttonEl.parentElement?.parentElement?.querySelector('input');
+					const value = input?.getAttribute('data-value');
+					if (value && !uniqueProperties.includes(value)) {
+						this.plugin.settings.defaultVisibleProperties.push(value);
+						await this.plugin.saveSettings();
+						this.display();
+					}
+				}));
+
+		// Scan for properties button
+		new Setting(propertiesSection)
+			.setName('Scan for Properties')
+			.setDesc('Scan all cards in this board for available properties')
+			.addButton(button => button
+				.setButtonText('Scan')
+				.onClick(async () => {
+					button.setButtonText('Scanning...');
+					button.setDisabled(true);
+					
+					try {
+						const dataManager = new DataManager(this.app, board, this.plugin.settings);
+						const cards = await dataManager.getKanbanCards();
+						const foundProperties = new Set<string>();
+						
+						cards.forEach(card => {
+							Object.keys(card.frontmatter).forEach(key => {
+								if (key !== board.columnProperty) {
+									foundProperties.add(key);
+								}
+							});
+						});
+						
+						let added = false;
+						foundProperties.forEach(prop => {
+							if (!this.plugin.settings.defaultVisibleProperties.includes(prop)) {
+								this.plugin.settings.defaultVisibleProperties.push(prop);
+								added = true;
+							}
+						});
+						
+						if (added) {
+							await this.plugin.saveSettings();
+							this.display();
+						} else {
+							button.setButtonText('No new properties found');
+							setTimeout(() => {
+								button.setButtonText('Scan');
+								button.setDisabled(false);
+							}, 2000);
+						}
+					} catch (error) {
+						console.error('Error scanning properties:', error);
+						button.setButtonText('Error');
+					}
+				}));
 	}
 
 	private displayGlobalSettings(containerEl: HTMLElement): void {
@@ -277,6 +347,17 @@ export class KanbanSettingTab extends PluginSettingTab {
 					this.plugin.settings.showFileCount = value;
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
+				}));
+
+		new Setting(globalSection)
+			.setName('Card Template')
+			.setDesc('Path to a markdown file to use as a template for new cards. Placeholders: {{title}}, {{date}}, {{time}}')
+			.addText(text => text
+				.setPlaceholder('templates/card-template.md')
+				.setValue(this.plugin.settings.cardTemplate)
+				.onChange(async (value) => {
+					this.plugin.settings.cardTemplate = value;
+					await this.plugin.saveSettings();
 				}));
 	}
 }
