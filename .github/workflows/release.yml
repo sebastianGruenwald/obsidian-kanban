@@ -40,8 +40,8 @@ jobs:
           tag="${GITHUB_REF#refs/tags/}"
           
           # Create a zip file for the release
-          mkdir obsidian-kanban-board
-          cp main.js manifest.json styles.css obsidian-kanban-board/
-          zip -r obsidian-kanban-board.zip obsidian-kanban-board/
+          mkdir obsidian-kanban
+          cp main.js manifest.json styles.css obsidian-kanban/
+          zip -r obsidian-kanban.zip obsidian-kanban/
           
-          gh release upload "$tag" obsidian-kanban-board.zip
+          gh release upload "$tag" obsidian-kanban.zip

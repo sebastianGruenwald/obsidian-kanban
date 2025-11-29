@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-kanban-board",
+	"name": "obsidian-kanban",
 	"version": "2.1.2",
 	"description": "Obsidian plugin for creating kanban boards from tagged notes",
 	"main": "main.js",
