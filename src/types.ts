@@ -15,6 +15,12 @@ export interface BoardConfig {
 	showColumnBackgrounds: boolean;
 	colorfulHeaders: boolean;
 	showCardColors: boolean;
+	wipLimits: Record<string, number>;
+	cardAging: boolean;
+	cardAgingThreshold: number;
+	autoMoveCompleted: boolean; // Move to last column when all subtasks checked
+	autoArchiveDelay: number; // Archive cards in last column after X days (0 to disable)
+	swimlaneProperty: string | null; // Property to use for swimlanes (null to disable)
 }
 
 export interface KanbanSettings {
@@ -42,7 +48,13 @@ export const DEFAULT_BOARD: BoardConfig = {
 	tagColors: {},
 	showColumnBackgrounds: false,
 	colorfulHeaders: true,
-	showCardColors: true
+	showCardColors: true,
+	wipLimits: {},
+	cardAging: false,
+	cardAgingThreshold: 7,
+	autoMoveCompleted: false,
+	autoArchiveDelay: 0,
+	swimlaneProperty: null
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {

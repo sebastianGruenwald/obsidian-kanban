@@ -6,10 +6,10 @@ import { getRandomCardColor } from './modals';
 
 export class DataManager {
 	constructor(
-		private app: App, 
+		private app: App,
 		private boardConfig: BoardConfig,
 		private settings: KanbanSettings
-	) {}
+	) { }
 
 	async getKanbanCards(): Promise<KanbanCard[]> {
 		try {
@@ -35,7 +35,7 @@ export class DataManager {
 
 	private async shouldIncludeFile(file: TFile): Promise<boolean> {
 		const cache = this.app.metadataCache.getFileCache(file);
-		
+
 		// Check if file has the required tag
 		const tags = getAllTags(cache);
 		if (!tags.includes(this.boardConfig.tagFilter)) {
@@ -54,10 +54,10 @@ export class DataManager {
 		try {
 			const cache = this.app.metadataCache.getFileCache(file);
 			const content = await this.app.vault.read(file);
-			
+
 			const frontmatter = cache?.frontmatter || {};
 			const column = frontmatter[this.boardConfig.columnProperty] || DEFAULTS.UNCATEGORIZED_COLUMN;
-			
+
 			return {
 				file: file.path,
 				title: file.basename,
@@ -96,7 +96,7 @@ export class DataManager {
 					const prop = this.boardConfig.sortBy;
 					const valA = a.frontmatter[prop];
 					const valB = b.frontmatter[prop];
-					
+
 					if (valA === valB) comparison = 0;
 					else if (valA === undefined || valA === null) comparison = -1;
 					else if (valB === undefined || valB === null) comparison = 1;
@@ -112,14 +112,14 @@ export class DataManager {
 	getColumns(cards: KanbanCard[]): string[] {
 		const columnsFromCards = [...new Set(cards.map(card => card.column))];
 		const allColumns = [...new Set([...this.boardConfig.defaultColumns, ...this.boardConfig.customColumns, ...columnsFromCards])];
-		
+
 		// Apply custom column order if set
 		if (this.boardConfig.columnOrder.length > 0) {
 			const orderedColumns = this.boardConfig.columnOrder.filter(col => allColumns.includes(col));
 			const remainingColumns = allColumns.filter(col => !this.boardConfig.columnOrder.includes(col));
 			return [...orderedColumns, ...remainingColumns];
 		}
-		
+
 		return allColumns;
 	}
 
@@ -165,10 +165,10 @@ export class DataManager {
 			if (!sanitizedTitle) {
 				throw new Error('Invalid card title');
 			}
-			
+
 			const fileName = `${sanitizedTitle}.md`;
 			let filePath = fileName;
-			
+
 			// Check if file already exists, if so, add a number
 			let counter = 1;
 			while (this.app.vault.getAbstractFileByPath(filePath)) {
@@ -194,7 +194,7 @@ export class DataManager {
 			} else {
 				content = `# ${title}`;
 			}
-			
+
 			const newFile = await this.app.vault.create(filePath, content);
 
 			// Use provided color or generate a random one
@@ -204,7 +204,7 @@ export class DataManager {
 			await this.app.fileManager.processFrontMatter(newFile, (frontmatter) => {
 				frontmatter[this.boardConfig.columnProperty] = columnName;
 				frontmatter['cardColor'] = finalCardColor;
-				
+
 				// Ensure tag exists in frontmatter tags if not in content
 				// Note: This is a simple way to add the tag. 
 				// Ideally we check if it's in the content, but for now adding to frontmatter is safe.
@@ -258,4 +258,42 @@ export class DataManager {
 
 	// Helper methods removed as they are replaced by app.fileManager.processFrontMatter
 
+	async runAutomations(cards: KanbanCard[]): Promise<void> {
+		if (!this.boardConfig.autoMoveCompleted && !this.boardConfig.autoArchiveDelay) {
+			return;
+		}
+
+		const lastColumn = this.boardConfig.columnOrder.length > 0
+			? this.boardConfig.columnOrder[this.boardConfig.columnOrder.length - 1]
+			: this.boardConfig.defaultColumns[this.boardConfig.defaultColumns.length - 1];
+
+		for (const card of cards) {
+			// Auto-move completed cards
+			if (this.boardConfig.autoMoveCompleted && card.column !== lastColumn) {
+				if (this.isCardCompleted(card)) {
+					await this.updateCardColumn(card.file, lastColumn);
+					// Update local card object to reflect change for subsequent checks
+					card.column = lastColumn;
+				}
+			}
+
+			// Auto-archive old cards in the last column
+			if (this.boardConfig.autoArchiveDelay > 0 && card.column === lastColumn) {
+				const daysSinceModified = (Date.now() - card.modified) / (1000 * 60 * 60 * 24);
+				if (daysSinceModified > this.boardConfig.autoArchiveDelay) {
+					await this.archiveCard(card.file);
+				}
+			}
+		}
+	}
+
+	private isCardCompleted(card: KanbanCard): boolean {
+		const regex = /- \[([ x])\]/g;
+		const matches = [...card.content.matchAll(regex)];
+
+		if (matches.length === 0) return false; // No tasks, not "completed"
+
+		const allChecked = matches.every(match => match[1] === 'x');
+		return allChecked;
+	}
 }

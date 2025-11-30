@@ -50,7 +50,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 
 	private displayAllBoardsSettings(containerEl: HTMLElement): void {
 		const boards = this.plugin.boardManager.getAllBoards();
-		
+
 		boards.forEach(board => {
 			this.displayBoardSettings(containerEl, board);
 		});
@@ -58,26 +58,26 @@ export class KanbanSettingTab extends PluginSettingTab {
 
 	private displayBoardSettings(containerEl: HTMLElement, board: BoardConfig): void {
 		const boardSection = containerEl.createDiv({ cls: 'setting-section board-settings' });
-		
+
 		// Expandable header
 		const headerDiv = boardSection.createDiv({ cls: 'board-settings-header' });
 		const isExpanded = board.id === this.currentBoardId;
-		
-		const toggleBtn = headerDiv.createEl('button', { 
+
+		const toggleBtn = headerDiv.createEl('button', {
 			cls: 'board-settings-toggle'
 		});
 		setIcon(toggleBtn, isExpanded ? 'chevron-down' : 'chevron-right');
-		
-		headerDiv.createEl('h3', { 
+
+		headerDiv.createEl('h3', {
 			text: `${board.name}${board.id === this.plugin.settings.activeBoard ? ' (Active)' : ''}`,
 			cls: 'board-settings-title'
 		});
-		
-		const contentDiv = boardSection.createDiv({ 
+
+		const contentDiv = boardSection.createDiv({
 			cls: 'board-settings-content',
 			attr: { style: isExpanded ? 'display: block' : 'display: none' }
 		});
-		
+
 		toggleBtn.addEventListener('click', () => {
 			const isCurrentlyExpanded = contentDiv.style.display === 'block';
 			contentDiv.style.display = isCurrentlyExpanded ? 'none' : 'block';
@@ -229,6 +229,18 @@ export class KanbanSettingTab extends PluginSettingTab {
 		// Tag Colors
 		this.displayTagColors(contentDiv, board);
 
+		// WIP Limits
+		this.displayWipLimits(contentDiv, board);
+
+		// Card Aging
+		this.displayCardAging(contentDiv, board);
+
+		// Automation
+		this.displayAutomationRules(contentDiv, board);
+
+		// Swimlanes
+		this.displaySwimlaneSettings(contentDiv, board);
+
 		// Delete board button (only if more than one board exists)
 		const allBoards = this.plugin.boardManager.getAllBoards();
 		if (allBoards.length > 1) {
@@ -264,9 +276,9 @@ export class KanbanSettingTab extends PluginSettingTab {
 		// Since we can't easily get cards here without async, we'll just let users add tags manually 
 		// OR we can try to scan if we want to be fancy. 
 		// For now, let's just list the ones already configured + an add button.
-		
+
 		const configuredTags = Object.keys(board.tagColors || {});
-		
+
 		if (configuredTags.length === 0) {
 			tagSection.createDiv({ text: 'No custom tag colors configured.', cls: 'setting-item-description' });
 		}
@@ -319,6 +331,121 @@ export class KanbanSettingTab extends PluginSettingTab {
 				}));
 	}
 
+	private displayWipLimits(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'wip-limits-section' });
+		section.createEl('h4', { text: 'WIP Limits' });
+		section.createEl('p', { text: 'Set maximum number of cards per column. Leave empty or 0 for no limit.', cls: 'setting-item-description' });
+
+		const allColumns = [...board.defaultColumns, ...board.customColumns];
+
+		if (allColumns.length === 0) {
+			section.createDiv({ text: 'No columns configured.', cls: 'setting-item-description' });
+			return;
+		}
+
+		allColumns.forEach(column => {
+			new Setting(section)
+				.setName(column)
+				.addText(text => text
+					.setPlaceholder('No limit')
+					.setValue(board.wipLimits?.[column]?.toString() || '')
+					.onChange(async (value) => {
+						const limit = parseInt(value);
+						const newLimits = { ...(board.wipLimits || {}) };
+
+						if (!isNaN(limit) && limit > 0) {
+							newLimits[column] = limit;
+						} else {
+							delete newLimits[column];
+						}
+
+						this.plugin.boardManager.updateBoard(board.id, { wipLimits: newLimits });
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+					}));
+		});
+	}
+
+	private displayCardAging(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'card-aging-section' });
+		section.createEl('h4', { text: 'Card Aging' });
+		section.createEl('p', { text: 'Visually age cards that haven\'t been modified in a while.', cls: 'setting-item-description' });
+
+		new Setting(section)
+			.setName('Enable Card Aging')
+			.setDesc('Fade out cards that are inactive')
+			.addToggle(toggle => toggle
+				.setValue(board.cardAging || false)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { cardAging: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+					this.display(); // Re-render to show/hide threshold setting
+				}));
+
+		if (board.cardAging) {
+			new Setting(section)
+				.setName('Aging Threshold (Days)')
+				.setDesc('Number of days before a card starts to age')
+				.addSlider(slider => slider
+					.setLimits(1, 365, 1)
+					.setValue(board.cardAgingThreshold || 7)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.boardManager.updateBoard(board.id, { cardAgingThreshold: value });
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+					}));
+		}
+	}
+
+	private displayAutomationRules(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'automation-section' });
+		section.createEl('h4', { text: 'Automation' });
+		section.createEl('p', { text: 'Automate common tasks.', cls: 'setting-item-description' });
+
+		new Setting(section)
+			.setName('Auto-move Completed Cards')
+			.setDesc('Automatically move cards to the last column when all subtasks are checked')
+			.addToggle(toggle => toggle
+				.setValue(board.autoMoveCompleted || false)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { autoMoveCompleted: value });
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(section)
+			.setName('Auto-archive Delay (Days)')
+			.setDesc('Automatically archive cards in the last column after X days (0 to disable)')
+			.addText(text => text
+				.setPlaceholder('0')
+				.setValue(board.autoArchiveDelay?.toString() || '0')
+				.onChange(async (value) => {
+					const delay = parseInt(value);
+					if (!isNaN(delay) && delay >= 0) {
+						this.plugin.boardManager.updateBoard(board.id, { autoArchiveDelay: delay });
+						await this.plugin.saveSettings();
+					}
+				}));
+	}
+
+	private displaySwimlaneSettings(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'swimlane-section' });
+		section.createEl('h4', { text: 'Swimlanes' });
+		section.createEl('p', { text: 'Group cards horizontally by property.', cls: 'setting-item-description' });
+
+		new Setting(section)
+			.setName('Swimlane Property')
+			.setDesc('Property to use for swimlanes (e.g. priority, assignee). Leave empty to disable.')
+			.addText(text => text
+				.setPlaceholder('priority')
+				.setValue(board.swimlaneProperty || '')
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { swimlaneProperty: value || null });
+					await this.plugin.saveSettings();
+				}));
+	}
+
 	private displayColumnManagement(containerEl: HTMLElement, board: BoardConfig): void {
 		const columnSection = containerEl.createDiv({ cls: 'column-management' });
 		columnSection.createEl('h4', { text: 'Custom Columns' });
@@ -364,7 +491,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.addToggle(toggle => toggle
 					.setValue(board.visibleProperties.includes(property))
 					.onChange(async (value) => {
-						const visibleProperties = value 
+						const visibleProperties = value
 							? [...board.visibleProperties, property]
 							: board.visibleProperties.filter(p => p !== property);
 						this.plugin.boardManager.updateBoard(board.id, { visibleProperties });
@@ -404,12 +531,12 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					button.setButtonText('Scanning...');
 					button.setDisabled(true);
-					
+
 					try {
 						const dataManager = new DataManager(this.app, board, this.plugin.settings);
 						const cards = await dataManager.getKanbanCards();
 						const foundProperties = new Set<string>();
-						
+
 						cards.forEach(card => {
 							Object.keys(card.frontmatter).forEach(key => {
 								if (key !== board.columnProperty) {
@@ -417,7 +544,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 								}
 							});
 						});
-						
+
 						let added = false;
 						foundProperties.forEach(prop => {
 							if (!this.plugin.settings.defaultVisibleProperties.includes(prop)) {
@@ -425,7 +552,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 								added = true;
 							}
 						});
-						
+
 						if (added) {
 							await this.plugin.saveSettings();
 							this.display();

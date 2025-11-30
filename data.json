@@ -41,7 +41,8 @@
       "themeFonts": {
         "default": "var(--font-interface)",
         "sticky-notes": "Caveat, cursive"
-      }
+      },
+      "swimlaneProperty": null
     }
   ],
   "activeBoard": "default",

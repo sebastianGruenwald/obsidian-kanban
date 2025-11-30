@@ -26,7 +26,7 @@ export class KanbanCardComponent {
 
 	private render(): HTMLElement {
 		const cardEl = this.container.createDiv({ cls: 'kanban-card' });
-		
+
 		// Apply density class
 		if (this.boardConfig.cardDensity) {
 			cardEl.addClass(`density-${this.boardConfig.cardDensity}`);
@@ -44,20 +44,23 @@ export class KanbanCardComponent {
 		}
 
 		cardEl.setAttribute('data-file-path', this.card.file);
-		
+
 		// Make card draggable
 		cardEl.draggable = true;
 		cardEl.addEventListener('dragstart', (e) => {
 			this.onDragStart(e, this.card, cardEl);
 		});
-		
+
 		cardEl.addEventListener('dragend', () => {
 			this.onDragEnd();
 		});
-		
+
 		// Card content based on visible properties
 		this.renderCardContent(cardEl);
-		
+
+		// Card Aging
+		this.applyCardAging(cardEl);
+
 		// Click to open file
 		cardEl.addEventListener('click', (e) => {
 			// Don't open file if we're editing
@@ -65,14 +68,14 @@ export class KanbanCardComponent {
 				this.openFile(this.card.file);
 			}
 		});
-		
+
 		// Double-click to edit title
 		cardEl.addEventListener('dblclick', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			this.startTitleEdit(cardEl);
 		});
-		
+
 		// Right-click context menu
 		cardEl.addEventListener('contextmenu', (e) => {
 			e.preventDefault();
@@ -84,7 +87,7 @@ export class KanbanCardComponent {
 
 	private renderCardContent(cardEl: HTMLElement): void {
 		const visibleProperties = this.boardConfig.visibleProperties;
-		
+
 		// Always show title
 		if (visibleProperties.includes('title')) {
 			cardEl.createDiv({ cls: 'kanban-card-title', text: this.card.title });
@@ -95,7 +98,7 @@ export class KanbanCardComponent {
 
 		if (visibleProperties.includes('tags') && this.card.frontmatter.tags) {
 			const tags = Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags];
-			
+
 			// Filter out the board tag
 			const boardTag = this.boardConfig.tagFilter?.replace('#', '');
 			const displayTags = tags.filter((t: string) => t.replace('#', '') !== boardTag);
@@ -105,7 +108,7 @@ export class KanbanCardComponent {
 				displayTags.forEach((tag: string) => {
 					const cleanTag = tag.replace('#', '');
 					const tagEl = tagsContainer.createSpan({ cls: 'kanban-card-tag', text: cleanTag });
-					
+
 					// Apply tag color
 					const color = this.getTagColor(cleanTag);
 					if (color) {
@@ -128,7 +131,7 @@ export class KanbanCardComponent {
 
 		// Footer for dates
 		const footer = cardEl.createDiv({ cls: 'kanban-card-footer' });
-		
+
 		if (visibleProperties.includes('created') && this.card.created) {
 			const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
 			dateEl.setAttribute('aria-label', 'Created');
@@ -140,6 +143,9 @@ export class KanbanCardComponent {
 			dateEl.setAttribute('aria-label', 'Modified');
 			dateEl.setText(new Date(this.card.modified).toLocaleDateString());
 		}
+
+		// Subtask Progress
+		this.renderSubtaskProgress(footer);
 	}
 
 	private getTagColor(tag: string): string {
@@ -147,13 +153,13 @@ export class KanbanCardComponent {
 		if (this.boardConfig.tagColors && this.boardConfig.tagColors[tag]) {
 			return this.boardConfig.tagColors[tag];
 		}
-		
+
 		// Generate deterministic color
 		let hash = 0;
 		for (let i = 0; i < tag.length; i++) {
 			hash = tag.charCodeAt(i) + ((hash << 5) - hash);
 		}
-		
+
 		// HSL color generation for nice pastel/vibrant colors
 		const h = Math.abs(hash) % 360;
 		return `hsl(${h}, 70%, 45%)`; // 45% lightness for good contrast with white text
@@ -168,13 +174,13 @@ export class KanbanCardComponent {
 
 	private showCardContextMenu(event: MouseEvent): void {
 		const menu = new Menu();
-		
+
 		menu.addItem((item) => {
 			item.setTitle('Open')
 				.setIcon('file-text')
 				.onClick(() => this.openFile(this.card.file));
 		});
-		
+
 		menu.addItem((item) => {
 			item.setTitle('Open in new tab')
 				.setIcon('file-plus')
@@ -211,9 +217,9 @@ export class KanbanCardComponent {
 					).open();
 				});
 		});
-		
+
 		menu.addSeparator();
-		
+
 		// Add move options for each column
 		for (const column of this.allColumns) {
 			if (column !== this.card.column) {
@@ -232,7 +238,7 @@ export class KanbanCardComponent {
 				.setIcon('archive')
 				.onClick(() => this.onArchive(this.card));
 		});
-		
+
 		menu.showAtMouseEvent(event);
 	}
 
@@ -300,5 +306,56 @@ export class KanbanCardComponent {
 		inputEl.addEventListener('blur', async () => {
 			setTimeout(() => finishEdit(true), 100);
 		});
+	}
+
+	private renderSubtaskProgress(container: HTMLElement): void {
+		const content = this.card.content;
+		const total = (content.match(/- \[[ x]\]/g) || []).length;
+		if (total === 0) return;
+
+		const completed = (content.match(/- \[x\]/g) || []).length;
+		const percentage = Math.round((completed / total) * 100);
+
+		const progressContainer = container.createDiv({ cls: 'kanban-subtask-progress' });
+		progressContainer.setAttribute('title', `${completed}/${total} subtasks completed`);
+
+		// Icon
+		setIcon(progressContainer.createSpan({ cls: 'kanban-subtask-icon' }), 'check-square');
+
+		// Text
+		progressContainer.createSpan({
+			cls: 'kanban-subtask-count',
+			text: `${completed}/${total}`
+		});
+
+		// Optional: Mini progress bar
+		// const bar = progressContainer.createDiv({ cls: 'kanban-subtask-bar' });
+		// bar.createDiv({ 
+		// 	cls: 'kanban-subtask-bar-fill',
+		// 	attr: { style: `width: ${percentage}%` }
+		// });
+	}
+
+	private applyCardAging(cardEl: HTMLElement): void {
+		if (!this.boardConfig.cardAging || !this.card.modified) return;
+
+		const now = Date.now();
+		const modified = this.card.modified;
+		const daysSinceModified = (now - modified) / (1000 * 60 * 60 * 24);
+		const threshold = this.boardConfig.cardAgingThreshold || 7;
+
+		if (daysSinceModified > threshold) {
+			cardEl.addClass('is-aged');
+
+			// Calculate opacity based on how far past the threshold it is
+			// Max aging effect after 2x threshold
+			const extraDays = daysSinceModified - threshold;
+			const maxExtraDays = threshold; // Cap at another threshold period
+			const agingFactor = Math.min(extraDays / maxExtraDays, 1);
+
+			// Opacity goes from 1.0 down to 0.6
+			const opacity = 1.0 - (agingFactor * 0.4);
+			cardEl.style.setProperty('--aging-opacity', opacity.toString());
+		}
 	}
 }
