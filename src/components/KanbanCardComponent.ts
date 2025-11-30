@@ -82,6 +82,18 @@ export class KanbanCardComponent {
 			this.showCardContextMenu(e);
 		});
 
+		// Mobile Options Button
+		const optionsBtn = cardEl.createEl('button', {
+			cls: 'kanban-card-options-btn',
+			attr: { 'aria-label': 'Card options' }
+		});
+		setIcon(optionsBtn, 'more-vertical');
+
+		optionsBtn.addEventListener('click', (e) => {
+			e.stopPropagation(); // Prevent card click
+			this.showCardContextMenu(e);
+		});
+
 		return cardEl;
 	}
 

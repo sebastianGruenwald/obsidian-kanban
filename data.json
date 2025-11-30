@@ -42,7 +42,7 @@
         "default": "var(--font-interface)",
         "sticky-notes": "Caveat, cursive"
       },
-      "swimlaneProperty": "priority"
+      "swimlaneProperty": null
     }
   ],
   "activeBoard": "default",

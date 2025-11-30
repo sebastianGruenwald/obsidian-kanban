@@ -727,6 +727,7 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
   flex-grow: 1;
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap; /* Ensure columns never wrap */
   overflow-x: auto;
   overflow-y: hidden;
   padding: var(--k-space-xl);
@@ -1775,4 +1776,148 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
 
 .kanban-subtask-count {
   font-weight: 500;
+}/* ==========================================================================
+   Mobile Optimizations
+   ========================================================================== */
+
+.is-mobile .kanban-header {
+  padding: var(--k-space-sm);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--k-space-sm);
+  height: auto;
+}
+
+.is-mobile .kanban-board-title {
+  text-align: center;
+  margin-bottom: var(--k-space-xs);
+  width: 100%;
+  font-size: 1.1rem;
+}
+
+.is-mobile .kanban-board-controls {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  justify-content: flex-start;
+  gap: var(--k-space-sm);
+  width: 100%;
+  padding-bottom: 4px; /* Space for scrollbar if visible */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
+}
+
+.is-mobile .kanban-board-controls::-webkit-scrollbar {
+  display: none; /* Hide scrollbar Chrome/Safari */
+}
+
+.is-mobile .kanban-search-container {
+  width: 100%;
+  order: -1; /* Search bar at top of controls */
+  margin-bottom: var(--k-space-xs);
+}
+
+.is-mobile .kanban-board {
+  padding: var(--k-space-sm);
+  gap: var(--k-space-md);
+  scroll-snap-type: x mandatory;
+  scroll-padding: var(--k-space-sm);
+  /* Force horizontal layout on mobile */
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.is-mobile .kanban-column {
+  /* Show exactly one column */
+  min-width: 100%;
+  max-width: 100%;
+  width: 100%;
+  flex: 0 0 100%;
+  
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  height: 100%;
+}
+
+/* Tablet optimization - show 2 columns */
+@media (min-width: 600px) {
+  .is-mobile .kanban-column {
+    min-width: 48%;
+    max-width: 48%;
+    flex: 0 0 48%;
+  }
+}
+
+.is-mobile .kanban-card {
+  padding: var(--k-space-md); /* Slightly larger padding */
+  /* Disable hover effects on mobile to prevent sticky hover states */
+  transform: none !important; 
+}
+
+.is-mobile .kanban-card:active {
+  background-color: var(--k-bg-card-hover);
+}
+
+.is-mobile .kanban-column-header {
+  padding: var(--k-space-md);
+}
+
+.is-mobile .kanban-column-controls {
+  opacity: 1; /* Always show controls on mobile */
+}
+
+.is-mobile .kanban-column-controls button {
+  width: 36px;
+  height: 36px;
+  /* Increase touch target */
+}
+
+.is-mobile .kanban-add-column-btn {
+  flex-shrink: 0;
+}
+
+.is-mobile .kanban-tag-filter-popup {
+  width: 90vw;
+  left: 5vw !important;
+  right: 5vw !important;
+  max-height: 50vh;
+  position: fixed;
+  top: 50% !important;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 100vh rgba(0,0,0,0.5); /* Dim background */
+}
+
+/* Mobile Card Options Button */
+.kanban-card-options-btn {
+  display: none; /* Hidden by default on desktop */
+  position: absolute;
+  top: var(--k-space-xs);
+  right: var(--k-space-xs);
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--k-text-muted);
+  border-radius: var(--k-radius-sm);
+  cursor: pointer;
+  z-index: 5;
+}
+
+.is-mobile .kanban-card-options-btn {
+  display: flex; /* Show on mobile */
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.kanban-card-options-btn:active {
+  background-color: var(--background-modifier-hover);
+  color: var(--k-text-title);
+}
+
+/* Adjust card title to not overlap with options button on mobile */
+.is-mobile .kanban-card-title {
+  padding-right: 24px;
 }

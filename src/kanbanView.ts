@@ -117,6 +117,8 @@ export class KanbanView extends ItemView {
 				animation: 150,
 				handle: '.kanban-column-header',
 				ghostClass: 'kanban-column-placeholder',
+				delay: 200, // Delay for touch devices
+				delayOnTouchOnly: true,
 				onEnd: async (evt) => {
 					if (evt.oldIndex === undefined || evt.newIndex === undefined || evt.oldIndex === evt.newIndex) return;
 

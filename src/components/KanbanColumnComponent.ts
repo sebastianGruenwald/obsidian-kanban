@@ -54,6 +54,8 @@ export class KanbanColumnComponent {
 			group: 'kanban-cards',
 			animation: 150,
 			ghostClass: 'kanban-card-placeholder',
+			delay: 200, // Delay for touch devices to prevent accidental drags
+			delayOnTouchOnly: true,
 			onAdd: (evt) => {
 				const itemEl = evt.item;
 				const filePath = itemEl.getAttribute('data-file-path');
