@@ -434,16 +434,58 @@ export class KanbanSettingTab extends PluginSettingTab {
 		section.createEl('h4', { text: 'Swimlanes' });
 		section.createEl('p', { text: 'Group cards horizontally by property.', cls: 'setting-item-description' });
 
+		// Scan for available properties
+		const availableProperties = new Set<string>();
+		// Add standard properties that might be useful for swimlanes
+		availableProperties.add('priority');
+		availableProperties.add('assignee');
+		availableProperties.add('status');
+
+		// We need to get all properties from the cards to populate the dropdown
+		// Since this is sync, we might not have access to cards directly here easily without async
+		// But we can try to get them via DataManager if we instantiate it, or just use what we have.
+		// For a better UX, let's try to get them.
+
+		// Create a dropdown with "None" and available properties
 		new Setting(section)
 			.setName('Swimlane Property')
-			.setDesc('Property to use for swimlanes (e.g. priority, assignee). Leave empty to disable.')
-			.addText(text => text
-				.setPlaceholder('priority')
-				.setValue(board.swimlaneProperty || '')
-				.onChange(async (value) => {
+			.setDesc('Property to use for swimlanes. Select "None" to disable.')
+			.addDropdown(async dropdown => {
+				dropdown.addOption('', 'None');
+
+				// Add known properties from board config if any
+				if (board.visibleProperties) {
+					board.visibleProperties.forEach(p => availableProperties.add(p));
+				}
+
+				// Try to scan cards if possible (async)
+				try {
+					const dataManager = new DataManager(this.app, board, this.plugin.settings);
+					const cards = await dataManager.getKanbanCards();
+					cards.forEach(card => {
+						Object.keys(card.frontmatter).forEach(key => {
+							if (key !== board.columnProperty && key !== 'tags') {
+								availableProperties.add(key);
+							}
+						});
+					});
+				} catch (e) {
+					console.error("Could not scan cards for properties", e);
+				}
+
+				// Sort and add options
+				Array.from(availableProperties).sort().forEach(prop => {
+					dropdown.addOption(prop, prop);
+				});
+
+				dropdown.setValue(board.swimlaneProperty || '');
+
+				dropdown.onChange(async (value) => {
 					this.plugin.boardManager.updateBoard(board.id, { swimlaneProperty: value || null });
 					await this.plugin.saveSettings();
-				}));
+					this.plugin.refreshAllViews();
+				});
+			});
 	}
 
 	private displayColumnManagement(containerEl: HTMLElement, board: BoardConfig): void {

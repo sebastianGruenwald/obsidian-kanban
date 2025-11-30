@@ -202,6 +202,7 @@ export class KanbanView extends ItemView {
 	}
 
 	private renderSwimlanes(container: HTMLElement, cards: KanbanCard[]): void {
+		container.empty(); // Clear container first
 		container.addClass('has-swimlanes');
 		const swimlaneProp = this.currentBoard!.swimlaneProperty!;
 
@@ -212,7 +213,12 @@ export class KanbanView extends ItemView {
 			swimlaneValues.add(String(val));
 		});
 
-		const sortedSwimlanes = Array.from(swimlaneValues).sort();
+		// Sort swimlanes, keeping 'Unassigned' at the bottom or top? Let's keep it at bottom.
+		const sortedSwimlanes = Array.from(swimlaneValues).sort((a, b) => {
+			if (a === 'Unassigned') return 1;
+			if (b === 'Unassigned') return -1;
+			return a.localeCompare(b);
+		});
 
 		// Render Column Headers Row
 		const headerRow = container.createDiv({ cls: 'kanban-swimlane-header-row' });
@@ -235,10 +241,12 @@ export class KanbanView extends ItemView {
 			// Columns within Swimlane
 			for (const columnName of this.columns) {
 				const cell = row.createDiv({ cls: 'kanban-swimlane-cell' });
-				const cellCards = cards.filter(card =>
-					card.column === columnName &&
-					(String(card.frontmatter[swimlaneProp] || 'Unassigned') === swimlane)
-				);
+
+				// Filter cards for this specific cell (column + swimlane value)
+				const cellCards = cards.filter(card => {
+					const cardSwimlaneVal = String(card.frontmatter[swimlaneProp] || 'Unassigned');
+					return card.column === columnName && cardSwimlaneVal === swimlane;
+				});
 
 				// We reuse KanbanColumnComponent but we need to hide its header via CSS or modify it
 				// For now, let's use a modified initialization or CSS class
@@ -287,8 +295,17 @@ export class KanbanView extends ItemView {
 			if (file instanceof TFile) {
 				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
 					frontmatter[this.currentBoard!.columnProperty] = newColumn;
-					frontmatter[swimlaneProp] = swimlaneValue === 'Unassigned' ? null : swimlaneValue;
+					// If value is 'Unassigned', we might want to remove the property or set it to null/empty
+					// But for now let's set it to null if it was 'Unassigned' and the property existed, 
+					// or just don't set it if we want to keep it clean. 
+					// Actually, if we drag to 'Unassigned' row, we should probably remove the property or set to null.
+					if (swimlaneValue === 'Unassigned') {
+						delete frontmatter[swimlaneProp];
+					} else {
+						frontmatter[swimlaneProp] = swimlaneValue;
+					}
 				});
+				// Refresh is handled by file watcher usually, but let's force it to be snappy
 				await this.refresh();
 			}
 		} catch (error) {
