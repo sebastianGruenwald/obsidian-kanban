@@ -533,11 +533,13 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.addToggle(toggle => toggle
 					.setValue(board.visibleProperties.includes(property))
 					.onChange(async (value) => {
-						const visibleProperties = value 
+						let visibleProperties = value 
 							? (board.visibleProperties.includes(property) 
 								? board.visibleProperties 
 								: [...board.visibleProperties, property])
 							: board.visibleProperties.filter(p => p !== property);
+						// Remove duplicates to fix any existing issues
+						visibleProperties = [...new Set(visibleProperties)];
 						this.plugin.boardManager.updateBoard(board.id, { visibleProperties });
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
