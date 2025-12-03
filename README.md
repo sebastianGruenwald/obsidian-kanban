@@ -58,8 +58,4 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 
 ## 📄 License
 
-<<<<<<< HEAD
-MIT License - see [LICENSE](LICENSE) for details.
-=======
 MIT License - see LICENSE file for details.
->>>>>>> 5e7d9581849cb0d452f92f30a6159ace1a4152f9
