@@ -244,7 +244,9 @@ export class KanbanSettingTab extends PluginSettingTab {
 					.setValue(board.visibleProperties.includes(property))
 					.onChange(async (value) => {
 						const visibleProperties = value 
-							? [...board.visibleProperties, property]
+							? (board.visibleProperties.includes(property) 
+								? board.visibleProperties 
+								: [...board.visibleProperties, property])
 							: board.visibleProperties.filter(p => p !== property);
 						this.plugin.boardManager.updateBoard(board.name, { visibleProperties });
 						await this.plugin.saveSettings();
