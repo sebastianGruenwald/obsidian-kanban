@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian Kanban Board</title>
+    <link rel="stylesheet" href="mock_styles.css">
+</head>
+<body>
+    <div class="kanban-header">
+        <h2 class="kanban-board-title">Personal Tasks</h2>
+        <div class="kanban-board-controls">
+            <select class="kanban-board-selector">
+                <option selected>Personal Tasks</option>
+                <option>Project Alpha</option>
+                <option>Content Pipeline</option>
+            </select>
+            <div class="kanban-sort-container">
+                <span class="kanban-sort-label">Sort:</span>
+                <select class="kanban-sort-selector">
+                    <option>Created</option>
+                </select>
+                <select class="kanban-sort-order-selector">
+                    <option>↓</option>
+                </select>
+            </div>
+            <button class="kanban-add-column-btn">+ Column</button>
+            <button class="kanban-refresh-btn">⟳</button>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <!-- Column 1: Inbox -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title-container">
+                    <span class="kanban-column-title">Inbox</span>
+                    <span class="kanban-column-drag-handle">⋮⋮</span>
+                </div>
+                <div class="kanban-column-controls">
+                    <button class="kanban-add-card-btn">+</button>
+                    <button class="kanban-column-options-btn">⋯</button>
+                </div>
+                <span class="kanban-column-count">(2)</span>
+            </div>
+            <div class="kanban-column-content">
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Schedule dentist appointment</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/30/2025</span>
+                        <span class="kanban-card-tags">Tags: #health</span>
+                    </div>
+                </div>
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Buy groceries for the week</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/30/2025</span>
+                        <span class="kanban-card-property">priority: high</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Today -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title-container">
+                    <span class="kanban-column-title">Today</span>
+                    <span class="kanban-column-drag-handle">⋮⋮</span>
+                </div>
+                <div class="kanban-column-controls">
+                    <button class="kanban-add-card-btn">+</button>
+                    <button class="kanban-column-options-btn">⋯</button>
+                </div>
+                <span class="kanban-column-count">(3)</span>
+            </div>
+            <div class="kanban-column-content">
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Finish quarterly report</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/28/2025</span>
+                        <span class="kanban-card-tags">Tags: #work, #urgent</span>
+                        <span class="kanban-card-property">priority: critical</span>
+                    </div>
+                </div>
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Call mom</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/29/2025</span>
+                        <span class="kanban-card-tags">Tags: #family</span>
+                    </div>
+                </div>
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Review PR #42</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/30/2025</span>
+                        <span class="kanban-card-tags">Tags: #dev</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 3: In Progress -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title-container">
+                    <span class="kanban-column-title">In Progress</span>
+                    <span class="kanban-column-drag-handle">⋮⋮</span>
+                </div>
+                <div class="kanban-column-controls">
+                    <button class="kanban-add-card-btn">+</button>
+                    <button class="kanban-column-options-btn">⋯</button>
+                </div>
+                <span class="kanban-column-count">(1)</span>
+            </div>
+            <div class="kanban-column-content">
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Write blog post about Kanban</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/25/2025</span>
+                        <span class="kanban-card-tags">Tags: #writing</span>
+                        <span class="kanban-card-property">status: drafting</span>
+                        <span class="kanban-card-property">word-count: 500</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 4: Done -->
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title-container">
+                    <span class="kanban-column-title">Done</span>
+                    <span class="kanban-column-drag-handle">⋮⋮</span>
+                </div>
+                <div class="kanban-column-controls">
+                    <button class="kanban-add-card-btn">+</button>
+                    <button class="kanban-column-options-btn">⋯</button>
+                </div>
+                <span class="kanban-column-count">(2)</span>
+            </div>
+            <div class="kanban-column-content">
+                <div class="kanban-card">
+                    <div class="kanban-card-title">Update system packages</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/20/2025</span>
+                        <span class="kanban-card-tags">Tags: #admin</span>
+                    </div>
+                </div>
+                 <div class="kanban-card">
+                    <div class="kanban-card-title">Pay electricity bill</div>
+                    <div class="kanban-card-meta">
+                        <span class="kanban-card-date">Created: 11/21/2025</span>
+                        <span class="kanban-card-tags">Tags: #finance</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,168 +1,66 @@
 # Obsidian Kanban Board Plugin
 
-A powerful plugin for Obsidian that creates customizable kanban boards from notes with specific tags and frontmatter properties.
+![Obsidian Kanban Board](docs/screenshot_assets/kanban_board.png)
 
-## 📦 Installation
+A powerful, highly customizable Kanban board plugin for Obsidian. Transform your notes into a visual project management system with drag-and-drop simplicity and deep integration with your vault.
 
-### Option 1: BRAT (Beta Reviewer's Auto-update Tool)
-1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) if you haven't already
-2. Open the command palette and run "BRAT: Add a beta plugin for testing"
-3. Enter this repository URL: `https://github.com/yourusername/obsidian-kanban-board`
-4. Click "Add Plugin" - BRAT will install and enable the plugin
+## ✨ Features
 
-### Option 2: Manual Installation
-1. Download the latest release from the [Releases page](https://github.com/yourusername/obsidian-kanban-board/releases)
-2. Extract the files to your vault's `.obsidian/plugins/kanban-board/` folder
-3. Enable the plugin in Settings → Community Plugins
+### 🎯 Visual Task Management
+- **Drag & Drop Interface**: Intuitive card movement between columns.
+- **Multiple Boards**: Create separate boards for different projects or areas of life.
+- **Board Switching**: Quickly jump between boards with the built-in selector.
 
-### Option 3: From Source
-1. Clone this repository into your vault's plugins folder
-2. Run `npm install` and `npm run build`
-3. Enable the plugin in Obsidian settings
+### 🎨 Rich Customization
+- **Dynamic Columns**: Create columns based on any frontmatter property.
+- **Custom Properties**: Display any frontmatter field on your cards (e.g., priority, tags, dates).
+- **Flexible Sorting**: Sort cards by creation date, modification date, or title.
+- **Theme Aware**: Seamlessly blends with your Obsidian theme, including dark mode support.
 
-## 🎯 Features
-
-### Multiple Boards
-- **Multiple kanban boards** with different tag filters
-- **Board switching** via dropdown selector
-- **Board-specific settings** and configurations
-- **Independent column management** per board
-
-### Dynamic Columns
-- **Frontmatter-based columns** using any property
-- **Add/remove custom columns** per board
-- **Default columns** that always appear
-- **Column ordering** and layout persistence
-
-### Card Management
-- **Drag and drop** cards between columns
-- **Create new cards** with + button in column headers
-- **Configurable card properties** (what to display on cards)
-- **Sort and filter** cards by various criteria
-
-### Customization
-- **Visible properties** per board (creation date, tags, custom fields)
-- **Auto-refresh** when files change
-- **Responsive design** for mobile and desktop
-- **Theme-aware** styling
+### 🛠 Powerful Workflows
+- **Frontmatter Integration**: Cards are just notes with specific frontmatter - fully compatible with other plugins.
+- **Auto-Refresh**: Boards automatically update when you modify files elsewhere.
+- **Mobile Ready**: Fully responsive design that works great on phones and tablets.
 
 ## 🚀 Quick Start
 
-1. Install the plugin in Obsidian
-2. Create notes with:
+1. **Install** the plugin from Community Plugins.
+2. **Create a Note** with the following frontmatter:
    ```yaml
    ---
    status: "In Progress"
    priority: "high"
+   tags: ["project-alpha"]
    ---
-   
-   # My Task
-   Task description here.
-   
-   #kanban
    ```
-3. Open kanban board from ribbon or command palette
-4. Drag cards between columns or use the + button to create new cards
+3. **Open the Kanban Board** from the ribbon or command palette.
+4. **Create a Board** in settings pointing to your tag (e.g., `#project-alpha`).
+5. **Start Organizing!** Drag cards, add columns, and customize your view.
 
-## 📋 Usage
+## 📦 Installation
 
-### Creating Boards
-1. Go to Settings → Kanban Board
-2. Click "Create Board"
-3. Set a name and tag filter (e.g., `#project-alpha`)
-4. Configure columns and visible properties
-
-### Managing Columns
-- **Add columns**: Use + button in column headers or settings
-- **Remove columns**: Right-click column header → Delete (custom columns only)
-- **Reorder columns**: Drag and drop (coming soon) or configure in settings
-
-### Card Properties
-Configure which frontmatter properties appear on cards:
-- Title (always shown)
-- Creation/modification dates
-- Tags
-- Custom frontmatter fields
-
-### Example Board Configurations
-
-**Project Management Board**
-- Tag: `#project`
-- Columns: `Backlog`, `In Progress`, `Review`, `Done`
-- Properties: `title`, `created`, `assignee`, `priority`
-
-**Content Creation Board**
-- Tag: `#content`
-- Columns: `Ideas`, `Writing`, `Review`, `Published`
-- Properties: `title`, `created`, `tags`, `word-count`
-
-## ⚙️ Settings
-
-### Board Management
-- Create/delete boards
-- Switch between boards
-- Configure board-specific settings
-
-### Column Configuration
-- Set default columns
-- Add/remove custom columns
-- Configure column property name
-
-### Display Options
-- Choose visible card properties
-- Show/hide file counts
-- Enable auto-refresh
-- Sort options (creation date, title, etc.)
-
-## 🔧 Installation
+### From Community Plugins
+1. Open Settings > Community Plugins
+2. Turn off Safe Mode
+3. Click Browse and search for "Kanban Board"
+4. Click Install and then Enable
 
 ### Manual Installation
-1. Download `main.js`, `manifest.json`, and `styles.css`
-2. Create folder: `<vault>/.obsidian/plugins/kanban-board/`
-3. Copy files to this folder
-4. Enable plugin in Settings → Community Plugins
+1. Download the latest release from the [Releases page](https://github.com/yourusername/obsidian-kanban-board/releases).
+2. Extract the files to your vault's `.obsidian/plugins/kanban-board/` folder.
+3. Reload Obsidian.
 
-### Development
-```bash
-git clone <repository>
-cd obsidian-kanban
-npm install
-npm run dev
-```
+## 🔧 Configuration
 
-## 🎨 Customization
-
-### Custom Styling
-Add CSS snippets to customize appearance:
-```css
-.kanban-card {
-    /* Your custom card styling */
-}
-
-.kanban-column {
-    /* Your custom column styling */
-}
-```
-
-### Board Templates
-Create template boards for different use cases:
-- Personal task management
-- Team project tracking
-- Content pipeline management
-- Study/research organization
-
-## 📖 Examples
-
-See `EXAMPLES.md` for detailed usage examples and board configurations.
-
-## 🔄 Changelog
-
-See `CHANGELOG.md` for version history and updates.
+Go to **Settings > Kanban Board** to configure:
+- **Board Definitions**: Set up multiple boards with unique names and tag filters.
+- **Column Mapping**: Define which property values map to which columns.
+- **Card Appearance**: Choose which properties to display on cards.
 
 ## 🤝 Contributing
 
-Contributions welcome! Please read the contributing guidelines and submit pull requests.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) for details.
