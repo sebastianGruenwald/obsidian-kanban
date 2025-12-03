@@ -5,10 +5,22 @@ export interface BoardConfig {
 	columnProperty: string;
 	defaultColumns: string[];
 	customColumns: string[];
+	columnWidths: Record<string, number>;
 	columnOrder: string[];
 	visibleProperties: string[];
-	sortBy: 'creation' | 'modification' | 'title' | 'none';
+	sortBy: 'creation' | 'modification' | 'title' | 'none' | string;
 	sortOrder: 'asc' | 'desc';
+	cardDensity: 'compact' | 'comfortable' | 'spacious';
+	tagColors: Record<string, string>;
+	showColumnBackgrounds: boolean;
+	colorfulHeaders: boolean;
+	showCardColors: boolean;
+	wipLimits: Record<string, number>;
+	cardAging: boolean;
+	cardAgingThreshold: number;
+	autoMoveCompleted: boolean; // Move to last column when all subtasks checked
+	autoArchiveDelay: number; // Archive cards in last column after X days (0 to disable)
+	swimlaneProperty: string | null; // Property to use for swimlanes (null to disable)
 }
 
 export interface KanbanSettings {
@@ -16,6 +28,7 @@ export interface KanbanSettings {
 	activeBoard: string;
 	autoRefresh: boolean;
 	showFileCount: boolean;
+	cardTemplate: string;
 	defaultVisibleProperties: string[];
 }
 
@@ -26,10 +39,22 @@ export const DEFAULT_BOARD: BoardConfig = {
 	columnProperty: 'status',
 	defaultColumns: ['To Do', 'In Progress', 'Done'],
 	customColumns: [],
+	columnWidths: {},
 	columnOrder: [],
 	visibleProperties: ['title', 'created'],
 	sortBy: 'creation',
-	sortOrder: 'desc'
+	sortOrder: 'desc',
+	cardDensity: 'comfortable',
+	tagColors: {},
+	showColumnBackgrounds: false,
+	colorfulHeaders: true,
+	showCardColors: true,
+	wipLimits: {},
+	cardAging: false,
+	cardAgingThreshold: 7,
+	autoMoveCompleted: false,
+	autoArchiveDelay: 0,
+	swimlaneProperty: null
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {
@@ -37,6 +62,7 @@ export const DEFAULT_SETTINGS: KanbanSettings = {
 	activeBoard: 'default',
 	autoRefresh: true,
 	showFileCount: true,
+	cardTemplate: '',
 	defaultVisibleProperties: ['title', 'created', 'modified']
 };
 

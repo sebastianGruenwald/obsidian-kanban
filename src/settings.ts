@@ -1,6 +1,8 @@
-import { App, PluginSettingTab, Setting, Modal, TextComponent, DropdownComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFile, setIcon } from 'obsidian';
 import KanbanPlugin from './main';
-import { BoardConfig, DEFAULT_BOARD } from './types';
+import { BoardConfig } from './types';
+import { CreateBoardModal, AddColumnModal } from './modals';
+import { DataManager } from './dataManager';
 
 export class KanbanSettingTab extends PluginSettingTab {
 	plugin: KanbanPlugin;
@@ -48,7 +50,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 
 	private displayAllBoardsSettings(containerEl: HTMLElement): void {
 		const boards = this.plugin.boardManager.getAllBoards();
-		
+
 		boards.forEach(board => {
 			this.displayBoardSettings(containerEl, board);
 		});
@@ -56,30 +58,30 @@ export class KanbanSettingTab extends PluginSettingTab {
 
 	private displayBoardSettings(containerEl: HTMLElement, board: BoardConfig): void {
 		const boardSection = containerEl.createDiv({ cls: 'setting-section board-settings' });
-		
+
 		// Expandable header
 		const headerDiv = boardSection.createDiv({ cls: 'board-settings-header' });
 		const isExpanded = board.id === this.currentBoardId;
-		
-		const toggleBtn = headerDiv.createEl('button', { 
-			text: isExpanded ? '▼' : '▶',
+
+		const toggleBtn = headerDiv.createEl('button', {
 			cls: 'board-settings-toggle'
 		});
-		
-		const headerTitle = headerDiv.createEl('h3', { 
+		setIcon(toggleBtn, isExpanded ? 'chevron-down' : 'chevron-right');
+
+		headerDiv.createEl('h3', {
 			text: `${board.name}${board.id === this.plugin.settings.activeBoard ? ' (Active)' : ''}`,
 			cls: 'board-settings-title'
 		});
-		
-		const contentDiv = boardSection.createDiv({ 
+
+		const contentDiv = boardSection.createDiv({
 			cls: 'board-settings-content',
 			attr: { style: isExpanded ? 'display: block' : 'display: none' }
 		});
-		
+
 		toggleBtn.addEventListener('click', () => {
 			const isCurrentlyExpanded = contentDiv.style.display === 'block';
 			contentDiv.style.display = isCurrentlyExpanded ? 'none' : 'block';
-			toggleBtn.setText(isCurrentlyExpanded ? '▶' : '▼');
+			setIcon(toggleBtn, isCurrentlyExpanded ? 'chevron-right' : 'chevron-down');
 			this.currentBoardId = isCurrentlyExpanded ? '' : board.id;
 		});
 
@@ -173,6 +175,72 @@ export class KanbanSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllViews();
 				}));
 
+		// Card Density
+		new Setting(contentDiv)
+			.setName('Card Density')
+			.setDesc('Adjust the visual density of cards')
+			.addDropdown(dropdown => dropdown
+				.addOption('compact', 'Compact')
+				.addOption('comfortable', 'Comfortable')
+				.addOption('spacious', 'Spacious')
+				.setValue(board.cardDensity || 'comfortable')
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { cardDensity: value as any });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		// Show Card Colors
+		new Setting(contentDiv)
+			.setName('Show card colors')
+			.setDesc('Display individual card colors. When off, all cards use the default style.')
+			.addToggle(toggle => toggle
+				.setValue(board.showCardColors ?? true)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { showCardColors: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		// Column Backgrounds
+		new Setting(contentDiv)
+			.setName('Distinct Column Backgrounds')
+			.setDesc('Add a distinct background color to columns to make them stand out')
+			.addToggle(toggle => toggle
+				.setValue(board.showColumnBackgrounds || false)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { showColumnBackgrounds: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		// Colorful Headers
+		new Setting(contentDiv)
+			.setName('Colorful Headers')
+			.setDesc('Add a splash of color to column headers')
+			.addToggle(toggle => toggle
+				.setValue(board.colorfulHeaders !== false) // Default to true if undefined
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { colorfulHeaders: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				}));
+
+		// Tag Colors
+		this.displayTagColors(contentDiv, board);
+
+		// WIP Limits
+		this.displayWipLimits(contentDiv, board);
+
+		// Card Aging
+		this.displayCardAging(contentDiv, board);
+
+		// Automation
+		this.displayAutomationRules(contentDiv, board);
+
+		// Swimlanes
+		this.displaySwimlaneSettings(contentDiv, board);
+
 		// Delete board button (only if more than one board exists)
 		const allBoards = this.plugin.boardManager.getAllBoards();
 		if (allBoards.length > 1) {
@@ -198,6 +266,228 @@ export class KanbanSettingTab extends PluginSettingTab {
 		}
 	}
 
+	private displayTagColors(containerEl: HTMLElement, board: BoardConfig): void {
+		const tagSection = containerEl.createDiv({ cls: 'tag-colors-section' });
+		tagSection.createEl('h4', { text: 'Tag Colors' });
+		tagSection.createEl('p', { text: 'Customize colors for tags found in this board.', cls: 'setting-item-description' });
+
+		// Helper to get all unique tags from the board
+		// We need to instantiate DataManager temporarily or just rely on what we know.
+		// Since we can't easily get cards here without async, we'll just let users add tags manually 
+		// OR we can try to scan if we want to be fancy. 
+		// For now, let's just list the ones already configured + an add button.
+
+		const configuredTags = Object.keys(board.tagColors || {});
+
+		if (configuredTags.length === 0) {
+			tagSection.createDiv({ text: 'No custom tag colors configured.', cls: 'setting-item-description' });
+		}
+
+		configuredTags.forEach(tag => {
+			const setting = new Setting(tagSection)
+				.setName(`#${tag}`)
+				.addColorPicker(color => color
+					.setValue(board.tagColors[tag])
+					.onChange(async (value) => {
+						const newColors = { ...board.tagColors, [tag]: value };
+						this.plugin.boardManager.updateBoard(board.id, { tagColors: newColors });
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+					}))
+				.addButton(button => button
+					.setIcon('trash')
+					.setTooltip('Remove custom color')
+					.onClick(async () => {
+						const newColors = { ...board.tagColors };
+						delete newColors[tag];
+						this.plugin.boardManager.updateBoard(board.id, { tagColors: newColors });
+						await this.plugin.saveSettings();
+						this.display(); // Re-render to remove the item
+						this.plugin.refreshAllViews();
+					}));
+		});
+
+		// Add new tag color
+		new Setting(tagSection)
+			.setName('Add Tag Color')
+			.setDesc('Enter a tag name (without #) to customize its color')
+			.addText(text => text
+				.setPlaceholder('tag-name')
+				.onChange(async (value) => {
+					text.inputEl.setAttribute('data-value', value);
+				}))
+			.addButton(button => button
+				.setButtonText('Add')
+				.onClick(async () => {
+					const input = button.buttonEl.parentElement?.parentElement?.querySelector('input');
+					const tag = input?.getAttribute('data-value');
+					if (tag) {
+						const newColors = { ...board.tagColors, [tag]: '#5c7cfa' }; // Default blue-ish
+						this.plugin.boardManager.updateBoard(board.id, { tagColors: newColors });
+						await this.plugin.saveSettings();
+						this.display();
+						this.plugin.refreshAllViews();
+					}
+				}));
+	}
+
+	private displayWipLimits(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'wip-limits-section' });
+		section.createEl('h4', { text: 'WIP Limits' });
+		section.createEl('p', { text: 'Set maximum number of cards per column. Leave empty or 0 for no limit.', cls: 'setting-item-description' });
+
+		const allColumns = [...board.defaultColumns, ...board.customColumns];
+
+		if (allColumns.length === 0) {
+			section.createDiv({ text: 'No columns configured.', cls: 'setting-item-description' });
+			return;
+		}
+
+		allColumns.forEach(column => {
+			new Setting(section)
+				.setName(column)
+				.addText(text => text
+					.setPlaceholder('No limit')
+					.setValue(board.wipLimits?.[column]?.toString() || '')
+					.onChange(async (value) => {
+						const limit = parseInt(value);
+						const newLimits = { ...(board.wipLimits || {}) };
+
+						if (!isNaN(limit) && limit > 0) {
+							newLimits[column] = limit;
+						} else {
+							delete newLimits[column];
+						}
+
+						this.plugin.boardManager.updateBoard(board.id, { wipLimits: newLimits });
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+					}));
+		});
+	}
+
+	private displayCardAging(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'card-aging-section' });
+		section.createEl('h4', { text: 'Card Aging' });
+		section.createEl('p', { text: 'Visually age cards that haven\'t been modified in a while.', cls: 'setting-item-description' });
+
+		new Setting(section)
+			.setName('Enable Card Aging')
+			.setDesc('Fade out cards that are inactive')
+			.addToggle(toggle => toggle
+				.setValue(board.cardAging || false)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { cardAging: value });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+					this.display(); // Re-render to show/hide threshold setting
+				}));
+
+		if (board.cardAging) {
+			new Setting(section)
+				.setName('Aging Threshold (Days)')
+				.setDesc('Number of days before a card starts to age')
+				.addSlider(slider => slider
+					.setLimits(1, 365, 1)
+					.setValue(board.cardAgingThreshold || 7)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.boardManager.updateBoard(board.id, { cardAgingThreshold: value });
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllViews();
+					}));
+		}
+	}
+
+	private displayAutomationRules(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'automation-section' });
+		section.createEl('h4', { text: 'Automation' });
+		section.createEl('p', { text: 'Automate common tasks.', cls: 'setting-item-description' });
+
+		new Setting(section)
+			.setName('Auto-move Completed Cards')
+			.setDesc('Automatically move cards to the last column when all subtasks are checked')
+			.addToggle(toggle => toggle
+				.setValue(board.autoMoveCompleted || false)
+				.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { autoMoveCompleted: value });
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(section)
+			.setName('Auto-archive Delay (Days)')
+			.setDesc('Automatically archive cards in the last column after X days (0 to disable)')
+			.addText(text => text
+				.setPlaceholder('0')
+				.setValue(board.autoArchiveDelay?.toString() || '0')
+				.onChange(async (value) => {
+					const delay = parseInt(value);
+					if (!isNaN(delay) && delay >= 0) {
+						this.plugin.boardManager.updateBoard(board.id, { autoArchiveDelay: delay });
+						await this.plugin.saveSettings();
+					}
+				}));
+	}
+
+	private displaySwimlaneSettings(containerEl: HTMLElement, board: BoardConfig): void {
+		const section = containerEl.createDiv({ cls: 'swimlane-section' });
+		section.createEl('h4', { text: 'Swimlanes' });
+		section.createEl('p', { text: 'Group cards horizontally by property.', cls: 'setting-item-description' });
+
+		// Scan for available properties
+		const availableProperties = new Set<string>();
+		// Add standard properties that might be useful for swimlanes
+		availableProperties.add('priority');
+		availableProperties.add('assignee');
+		availableProperties.add('status');
+
+		// We need to get all properties from the cards to populate the dropdown
+		// Since this is sync, we might not have access to cards directly here easily without async
+		// But we can try to get them via DataManager if we instantiate it, or just use what we have.
+		// For a better UX, let's try to get them.
+
+		// Create a dropdown with "None" and available properties
+		new Setting(section)
+			.setName('Swimlane Property')
+			.setDesc('Property to use for swimlanes. Select "None" to disable.')
+			.addDropdown(async dropdown => {
+				dropdown.addOption('', 'None');
+
+				// Add known properties from board config if any
+				if (board.visibleProperties) {
+					board.visibleProperties.forEach(p => availableProperties.add(p));
+				}
+
+				// Try to scan cards if possible (async)
+				try {
+					const dataManager = new DataManager(this.app, board, this.plugin.settings);
+					const cards = await dataManager.getKanbanCards();
+					cards.forEach(card => {
+						Object.keys(card.frontmatter).forEach(key => {
+							if (key !== board.columnProperty && key !== 'tags') {
+								availableProperties.add(key);
+							}
+						});
+					});
+				} catch (e) {
+					console.error("Could not scan cards for properties", e);
+				}
+
+				// Sort and add options
+				Array.from(availableProperties).sort().forEach(prop => {
+					dropdown.addOption(prop, prop);
+				});
+
+				dropdown.setValue(board.swimlaneProperty || '');
+
+				dropdown.onChange(async (value) => {
+					this.plugin.boardManager.updateBoard(board.id, { swimlaneProperty: value || null });
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllViews();
+				});
+			});
+	}
+
 	private displayColumnManagement(containerEl: HTMLElement, board: BoardConfig): void {
 		const columnSection = containerEl.createDiv({ cls: 'column-management' });
 		columnSection.createEl('h4', { text: 'Custom Columns' });
@@ -210,7 +500,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 					.setButtonText('Remove')
 					.setWarning()
 					.onClick(async () => {
-						this.plugin.boardManager.removeColumnFromBoard(board.name, column);
+						this.plugin.boardManager.removeColumnFromBoard(board.id, column);
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
 						this.display();
@@ -224,7 +514,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText('Add Column')
 				.onClick(() => {
-					new AddColumnModalSettings(this.app, this.plugin, board.name, () => {
+					new AddColumnModal(this.app, this.plugin, board.id, () => {
 						this.display();
 					}).open();
 				}));
@@ -248,11 +538,80 @@ export class KanbanSettingTab extends PluginSettingTab {
 								? board.visibleProperties 
 								: [...board.visibleProperties, property])
 							: board.visibleProperties.filter(p => p !== property);
-						this.plugin.boardManager.updateBoard(board.name, { visibleProperties });
+						this.plugin.boardManager.updateBoard(board.id, { visibleProperties });
 						await this.plugin.saveSettings();
 						this.plugin.refreshAllViews();
 					}));
 		});
+
+		// Add new property manually
+		new Setting(propertiesSection)
+			.setName('Add Custom Property')
+			.setDesc('Add a frontmatter property to the list')
+			.addText(text => text
+				.setPlaceholder('property_name')
+				.onChange(async (value) => {
+					// Just storing the value for the button
+					text.inputEl.setAttribute('data-value', value);
+				}))
+			.addButton(button => button
+				.setButtonText('Add')
+				.onClick(async () => {
+					const input = button.buttonEl.parentElement?.parentElement?.querySelector('input');
+					const value = input?.getAttribute('data-value');
+					if (value && !uniqueProperties.includes(value)) {
+						this.plugin.settings.defaultVisibleProperties.push(value);
+						await this.plugin.saveSettings();
+						this.display();
+					}
+				}));
+
+		// Scan for properties button
+		new Setting(propertiesSection)
+			.setName('Scan for Properties')
+			.setDesc('Scan all cards in this board for available properties')
+			.addButton(button => button
+				.setButtonText('Scan')
+				.onClick(async () => {
+					button.setButtonText('Scanning...');
+					button.setDisabled(true);
+
+					try {
+						const dataManager = new DataManager(this.app, board, this.plugin.settings);
+						const cards = await dataManager.getKanbanCards();
+						const foundProperties = new Set<string>();
+
+						cards.forEach(card => {
+							Object.keys(card.frontmatter).forEach(key => {
+								if (key !== board.columnProperty) {
+									foundProperties.add(key);
+								}
+							});
+						});
+
+						let added = false;
+						foundProperties.forEach(prop => {
+							if (!this.plugin.settings.defaultVisibleProperties.includes(prop)) {
+								this.plugin.settings.defaultVisibleProperties.push(prop);
+								added = true;
+							}
+						});
+
+						if (added) {
+							await this.plugin.saveSettings();
+							this.display();
+						} else {
+							button.setButtonText('No new properties found');
+							setTimeout(() => {
+								button.setButtonText('Scan');
+								button.setDisabled(false);
+							}, 2000);
+						}
+					} catch (error) {
+						console.error('Error scanning properties:', error);
+						button.setButtonText('Error');
+					}
+				}));
 	}
 
 	private displayGlobalSettings(containerEl: HTMLElement): void {
@@ -279,136 +638,17 @@ export class KanbanSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllViews();
 				}));
+
+		new Setting(globalSection)
+			.setName('Card Template')
+			.setDesc('Path to a markdown file to use as a template for new cards. Placeholders: {{title}}, {{date}}, {{time}}')
+			.addText(text => text
+				.setPlaceholder('templates/card-template.md')
+				.setValue(this.plugin.settings.cardTemplate)
+				.onChange(async (value) => {
+					this.plugin.settings.cardTemplate = value;
+					await this.plugin.saveSettings();
+				}));
 	}
 }
 
-class CreateBoardModal extends Modal {
-	private nameInput: TextComponent;
-	private tagInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Create New Board' });
-
-		new Setting(contentEl)
-			.setName('Board Name')
-			.addText(text => {
-				this.nameInput = text;
-				text.setPlaceholder('My Kanban Board');
-			});
-
-		new Setting(contentEl)
-			.setName('Tag Filter')
-			.addText(text => {
-				this.tagInput = text;
-				text.setPlaceholder('#my-tag');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Create')
-				.setCta()
-				.onClick(async () => {
-					const name = this.nameInput.getValue().trim();
-					const tag = this.tagInput.getValue().trim();
-					
-					if (name && tag) {
-						const newBoard = this.plugin.boardManager.createNewBoard(name, tag);
-						this.plugin.boardManager.addBoard(newBoard);
-						this.plugin.settings.activeBoard = newBoard.id;
-						await this.plugin.saveSettings();
-						this.close();
-						this.onSubmit();
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class AddColumnModal extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Add Custom Column' });
-
-		new Setting(contentEl)
-			.setName('Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder('New Column');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Add')
-				.setCta()
-				.onClick(async () => {
-					const columnName = this.columnInput.getValue().trim();
-					
-					if (columnName) {
-						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.close();
-							this.onSubmit();
-						}
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class AddColumnModalSettings extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Add Custom Column' });
-
-		new Setting(contentEl)
-			.setName('Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder('New Column');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Add')
-				.setCta()
-				.onClick(async () => {
-					const columnName = this.columnInput.getValue().trim();
-					
-					if (columnName) {
-						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.close();
-							this.onSubmit();
-						}
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}

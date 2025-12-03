@@ -1,16 +1,27 @@
-import { ItemView, WorkspaceLeaf, Menu, TFile, Modal, TextComponent, Setting, App } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Menu, TFile, setIcon, TextComponent } from 'obsidian';
 import { KanbanCard, BoardConfig } from './types';
 import { DataManager } from './dataManager';
 import KanbanPlugin from './main';
+import { AddColumnModal } from './modals';
+import { VIEW_TYPE_KANBAN } from './constants';
+import { KanbanColumnComponent } from './components/KanbanColumnComponent';
+import Sortable from 'sortablejs';
 
-export const VIEW_TYPE_KANBAN = 'kanban-board-view';
+export { VIEW_TYPE_KANBAN };
 
 export class KanbanView extends ItemView {
-	private dataManager: DataManager;
+	private dataManager!: DataManager;
 	private cards: KanbanCard[] = [];
 	private columns: string[] = [];
 	private draggedCard: HTMLElement | null = null;
+	private placeholder: HTMLElement | null = null;
 	private currentBoard: BoardConfig | null = null;
+	private searchQuery: string = '';
+	private selectedTags: Set<string> = new Set();
+	private tagSearchQuery: string = '';
+	private tagFilterPopup: HTMLElement | null = null;
+	private headerContainer: HTMLElement | null = null;
+	private boardContainer: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, private plugin: KanbanPlugin) {
 		super(leaf);
@@ -20,7 +31,7 @@ export class KanbanView extends ItemView {
 	private updateCurrentBoard() {
 		this.currentBoard = this.plugin.boardManager.getBoard(this.plugin.settings.activeBoard);
 		if (this.currentBoard) {
-			this.dataManager = new DataManager(this.app, this.currentBoard);
+			this.dataManager = new DataManager(this.app, this.currentBoard, this.plugin.settings);
 		}
 	}
 
@@ -37,60 +48,298 @@ export class KanbanView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
+		const container = this.containerEl.children[1];
+		container.empty();
+		this.headerContainer = container.createDiv({ cls: 'kanban-header' });
+		this.boardContainer = container.createDiv({ cls: 'kanban-board' });
+
 		await this.refresh();
 	}
 
 	async refresh(): Promise<void> {
 		this.updateCurrentBoard();
 		if (!this.currentBoard || !this.dataManager) return;
-		
+
 		this.cards = await this.dataManager.getKanbanCards();
+
+		// Run automations
+		await this.dataManager.runAutomations(this.cards);
+
+		// Re-fetch cards if automations might have changed them
+		if (this.currentBoard.autoMoveCompleted || this.currentBoard.autoArchiveDelay > 0) {
+			this.cards = await this.dataManager.getKanbanCards();
+		}
+
 		this.columns = this.dataManager.getColumns(this.cards);
-		this.render();
+
+		this.renderHeader();
+		this.renderBoard();
 	}
 
-	private render(): void {
-		const container = this.containerEl.children[1];
-		container.empty();
-		
+	private renderHeader(): void {
+		if (!this.headerContainer) return;
+		this.headerContainer.empty();
+		if (!this.currentBoard) return;
+		this.createBoardHeader(this.headerContainer);
+	}
+
+	private renderBoard(): void {
+		if (!this.boardContainer) return;
+		this.boardContainer.empty();
+
 		if (!this.currentBoard) {
-			container.createDiv({ 
-				text: 'No board selected', 
-				cls: 'kanban-error' 
+			this.boardContainer.createDiv({
+				text: 'No board selected',
+				cls: 'kanban-error'
 			});
 			return;
 		}
 
-		// Board header with controls
-		const header = container.createDiv({ cls: 'kanban-header' });
-		this.createBoardHeader(header);
-		
-		const kanbanContainer = container.createDiv({ cls: 'kanban-board' });
-		
-		// Create columns
-		for (const columnName of this.columns) {
-			const columnCards = this.cards.filter(card => card.column === columnName);
-			this.createColumn(kanbanContainer, columnName, columnCards);
+		const kanbanContainer = this.boardContainer;
+
+		// Column backgrounds setting
+		if (this.currentBoard?.showColumnBackgrounds) {
+			kanbanContainer.addClass('distinct-columns');
+		} else {
+			kanbanContainer.removeClass('distinct-columns');
 		}
-		
-		this.addStyles();
+
+		if (this.currentBoard?.colorfulHeaders !== false) {
+			kanbanContainer.addClass('colorful-headers');
+		} else {
+			kanbanContainer.removeClass('colorful-headers');
+		}
+
+		// Initialize Sortable for Columns (only if not using swimlanes, as swimlanes change structure)
+		// For simplicity, we disable column reordering via drag-and-drop when swimlanes are active for now
+		if (!this.currentBoard?.swimlaneProperty) {
+			new Sortable(kanbanContainer, {
+				animation: 150,
+				handle: '.kanban-column-header',
+				ghostClass: 'kanban-column-placeholder',
+				delay: 200, // Delay for touch devices
+				delayOnTouchOnly: true,
+				onEnd: async (evt) => {
+					if (evt.oldIndex === undefined || evt.newIndex === undefined || evt.oldIndex === evt.newIndex) return;
+
+					const newOrder = [...this.columns];
+					const movedColumn = newOrder.splice(evt.oldIndex, 1)[0];
+					newOrder.splice(evt.newIndex, 0, movedColumn);
+
+					// Update board configuration
+					if (this.currentBoard) {
+						this.plugin.boardManager.updateColumnOrder(this.currentBoard.id, newOrder);
+						await this.plugin.saveSettings();
+						this.columns = newOrder;
+					}
+				}
+			});
+		}
+
+		// Filter cards based on search query and tags
+		const filteredCards = this.cards.filter(card => {
+			const matchesSearch = !this.searchQuery ||
+				card.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+				card.content.toLowerCase().includes(this.searchQuery.toLowerCase());
+
+			if (!matchesSearch) return false;
+
+			if (this.selectedTags.size === 0) return true;
+
+			const cardTags = card.frontmatter.tags
+				? (Array.isArray(card.frontmatter.tags) ? card.frontmatter.tags : [card.frontmatter.tags])
+				: [];
+
+			// Check if card has ANY of the selected tags
+			const cleanCardTags = cardTags.map((t: string) => t.replace('#', ''));
+			return cleanCardTags.some((t: string) => this.selectedTags.has(t));
+		});
+
+		if (this.currentBoard?.swimlaneProperty) {
+			this.renderSwimlanes(kanbanContainer, filteredCards);
+		} else {
+			this.renderColumns(kanbanContainer, filteredCards);
+		}
+	}
+
+	private renderColumns(container: HTMLElement, cards: KanbanCard[]): void {
+		for (const columnName of this.columns) {
+			const columnCards = cards.filter(card => card.column === columnName);
+
+			new KanbanColumnComponent(
+				this.app,
+				this.plugin,
+				this.dataManager,
+				this.currentBoard!,
+				container,
+				columnName,
+				columnCards,
+				this.columns,
+				{
+					onCardMove: (filePath, newColumn) => this.moveCard(filePath, newColumn),
+					onCardArchive: (card) => this.archiveCard(card),
+					onColumnRename: () => this.refresh(),
+					onColumnDelete: async () => {
+						await this.plugin.saveSettings();
+						await this.refresh();
+					},
+					onColumnReorder: (draggedColumn, targetColumn) => { },
+					onColumnResize: async (width) => {
+						if (this.currentBoard) {
+							const columnWidths = this.currentBoard.columnWidths || {};
+							columnWidths[columnName] = width;
+							this.plugin.boardManager.updateBoard(this.currentBoard.id, { columnWidths });
+							await this.plugin.saveSettings();
+						}
+					},
+					onNewCard: () => this.refresh(),
+					onDragStart: () => { },
+					onDragEnd: () => { },
+					getDraggedCard: () => null,
+					getPlaceholder: () => null,
+					setPlaceholder: () => { }
+				}
+			);
+		}
+	}
+
+	private renderSwimlanes(container: HTMLElement, cards: KanbanCard[]): void {
+		container.empty(); // Clear container first
+		container.addClass('has-swimlanes');
+		const swimlaneProp = this.currentBoard!.swimlaneProperty!;
+
+		// Get unique swimlane values
+		const swimlaneValues = new Set<string>();
+		cards.forEach(card => {
+			const val = card.frontmatter[swimlaneProp] || 'Unassigned';
+			swimlaneValues.add(String(val));
+		});
+
+		// Sort swimlanes, keeping 'Unassigned' at the bottom or top? Let's keep it at bottom.
+		const sortedSwimlanes = Array.from(swimlaneValues).sort((a, b) => {
+			if (a === 'Unassigned') return 1;
+			if (b === 'Unassigned') return -1;
+			return a.localeCompare(b);
+		});
+
+		// Render Column Headers Row
+		const headerRow = container.createDiv({ cls: 'kanban-swimlane-header-row' });
+		// Empty corner cell
+		headerRow.createDiv({ cls: 'kanban-swimlane-corner' });
+
+		this.columns.forEach(colName => {
+			const colHeader = headerRow.createDiv({ cls: 'kanban-column-header' });
+			colHeader.createSpan({ text: colName, cls: 'kanban-column-title' });
+		});
+
+		// Render Swimlane Rows
+		for (const swimlane of sortedSwimlanes) {
+			const row = container.createDiv({ cls: 'kanban-swimlane-row' });
+
+			// Swimlane Header (Vertical)
+			const swimlaneHeader = row.createDiv({ cls: 'kanban-swimlane-header' });
+			swimlaneHeader.createSpan({ text: swimlane });
+
+			// Columns within Swimlane
+			for (const columnName of this.columns) {
+				const cell = row.createDiv({ cls: 'kanban-swimlane-cell' });
+
+				// Filter cards for this specific cell (column + swimlane value)
+				const cellCards = cards.filter(card => {
+					const cardSwimlaneVal = String(card.frontmatter[swimlaneProp] || 'Unassigned');
+					return card.column === columnName && cardSwimlaneVal === swimlane;
+				});
+
+				// We reuse KanbanColumnComponent but we need to hide its header via CSS or modify it
+				// For now, let's use a modified initialization or CSS class
+				const colComponent = new KanbanColumnComponent(
+					this.app,
+					this.plugin,
+					this.dataManager,
+					this.currentBoard!,
+					cell, // Render into cell
+					columnName,
+					cellCards,
+					this.columns,
+					{
+						onCardMove: async (filePath, newColumn) => {
+							// When moving to a cell, we also need to update the swimlane property!
+							// But KanbanColumnComponent only knows about columns.
+							// We need to intercept this.
+							await this.moveCardToSwimlane(filePath, newColumn, swimlaneProp, swimlane);
+						},
+						onCardArchive: (card) => this.archiveCard(card),
+						onColumnRename: () => this.refresh(),
+						onColumnDelete: async () => {
+							await this.plugin.saveSettings();
+							await this.refresh();
+						},
+						onColumnReorder: () => { },
+						onColumnResize: () => { },
+						onNewCard: () => this.refresh(),
+						onDragStart: () => { },
+						onDragEnd: () => { },
+						getDraggedCard: () => null,
+						getPlaceholder: () => null,
+						setPlaceholder: () => { }
+					}
+				);
+
+				// Add a class to indicate this is a cell, so we can hide the header via CSS
+				cell.querySelector('.kanban-column')?.addClass('is-swimlane-cell');
+			}
+		}
+	}
+
+	private async moveCardToSwimlane(filePath: string, newColumn: string, swimlaneProp: string, swimlaneValue: string): Promise<void> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (file instanceof TFile) {
+				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+					frontmatter[this.currentBoard!.columnProperty] = newColumn;
+					// If value is 'Unassigned', we might want to remove the property or set it to null/empty
+					// But for now let's set it to null if it was 'Unassigned' and the property existed, 
+					// or just don't set it if we want to keep it clean. 
+					// Actually, if we drag to 'Unassigned' row, we should probably remove the property or set to null.
+					if (swimlaneValue === 'Unassigned') {
+						delete frontmatter[swimlaneProp];
+					} else {
+						frontmatter[swimlaneProp] = swimlaneValue;
+					}
+				});
+				// Refresh is handled by file watcher usually, but let's force it to be snappy
+				await this.refresh();
+			}
+		} catch (error) {
+			console.error('Failed to move card to swimlane:', error);
+		}
 	}
 
 	private createBoardHeader(container: HTMLElement): void {
-		const title = container.createEl('h2', { 
+		container.createEl('h2', {
 			text: this.currentBoard?.name || 'Kanban Board',
 			cls: 'kanban-board-title'
 		});
 
 		const controls = container.createDiv({ cls: 'kanban-board-controls' });
-		
+
+		// Search input
+		const searchContainer = controls.createDiv({ cls: 'kanban-search-container' });
+		const searchInput = new TextComponent(searchContainer);
+		searchInput.setPlaceholder('Search cards...');
+		searchInput.setValue(this.searchQuery);
+		searchInput.onChange((value) => {
+			this.searchQuery = value;
+			this.renderBoard(); // Re-render to filter cards
+		});
+
 		// Board selector
 		const boardSelect = controls.createEl('select', { cls: 'kanban-board-selector' });
 		const boards = this.plugin.boardManager.getAllBoards();
 		boards.forEach(board => {
-			const option = boardSelect.createEl('option', { 
-				value: board.id, 
-				text: board.name 
+			const option = boardSelect.createEl('option', {
+				value: board.id,
+				text: board.name
 			});
 			if (board.id === this.plugin.settings.activeBoard) {
 				option.selected = true;
@@ -107,19 +356,31 @@ export class KanbanView extends ItemView {
 		// Sort dropdown
 		const sortContainer = controls.createDiv({ cls: 'kanban-sort-container' });
 		sortContainer.createEl('label', { text: 'Sort:', cls: 'kanban-sort-label' });
-		
+
 		const sortSelect = sortContainer.createEl('select', { cls: 'kanban-sort-selector' });
+
+		// Standard sort options
 		const sortOptions = [
 			{ value: 'none', text: 'No sorting' },
 			{ value: 'creation', text: 'Created' },
 			{ value: 'modification', text: 'Modified' },
 			{ value: 'title', text: 'Title' }
 		];
-		
+
+		// Add visible properties to sort options
+		if (this.currentBoard?.visibleProperties) {
+			this.currentBoard.visibleProperties.forEach(prop => {
+				// Skip standard properties that are already covered or not sortable in a simple way
+				if (!['title', 'created', 'modified', 'tags'].includes(prop)) {
+					sortOptions.push({ value: prop, text: prop });
+				}
+			});
+		}
+
 		sortOptions.forEach(option => {
-			const optionEl = sortSelect.createEl('option', { 
-				value: option.value, 
-				text: option.text 
+			const optionEl = sortSelect.createEl('option', {
+				value: option.value,
+				text: option.text
 			});
 			if (option.value === this.currentBoard?.sortBy) {
 				optionEl.selected = true;
@@ -146,11 +407,13 @@ export class KanbanView extends ItemView {
 		});
 
 		// Add column button
-		const addColumnBtn = controls.createEl('button', { 
-			text: '+ Column', 
+		const addColumnBtn = controls.createEl('button', {
 			cls: 'kanban-add-column-btn',
 			attr: { title: 'Add new column' }
 		});
+		setIcon(addColumnBtn, 'plus');
+		addColumnBtn.createSpan({ text: ' Column' });
+
 		addColumnBtn.addEventListener('click', () => {
 			new AddColumnModal(this.app, this.plugin, this.currentBoard!.id, () => {
 				this.refresh();
@@ -158,281 +421,207 @@ export class KanbanView extends ItemView {
 		});
 
 		// Refresh button
-		const refreshBtn = controls.createEl('button', { 
-			text: '⟳', 
+		const refreshBtn = controls.createEl('button', {
 			cls: 'kanban-refresh-btn',
 			attr: { title: 'Refresh Board' }
 		});
+		setIcon(refreshBtn, 'refresh-cw');
+
 		refreshBtn.addEventListener('click', () => this.refresh());
+
+		// Filter button
+		const filterBtn = controls.createEl('button', {
+			cls: `kanban-filter-btn ${this.selectedTags.size > 0 ? 'is-active' : ''}`,
+			attr: { title: 'Filter Tags' }
+		});
+		setIcon(filterBtn, 'filter');
+		if (this.selectedTags.size > 0) {
+			filterBtn.createSpan({ text: `${this.selectedTags.size}`, cls: 'kanban-filter-count' });
+		}
+
+		filterBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.toggleTagFilter(filterBtn);
+		});
 	}
 
-	private createColumn(container: HTMLElement, columnName: string, cards: KanbanCard[]): void {
-		const column = container.createDiv({ cls: 'kanban-column' });
-		column.setAttribute('data-column-name', columnName);
-		
-		// Column header
-		const header = column.createDiv({ cls: 'kanban-column-header' });
-		
-		// Make header draggable for column reordering
-		header.draggable = true;
-		header.addEventListener('dragstart', (e) => {
-			e.dataTransfer?.setData('text/column-name', columnName);
-			column.addClass('column-dragging');
-			
-			// Add visual indicators to all other columns
-			const allColumns = container.querySelectorAll('.kanban-column');
-			allColumns.forEach(col => {
-				if (col !== column) {
-					col.addClass('drop-target-available');
+	private toggleTagFilter(targetBtn: HTMLElement): void {
+		if (this.tagFilterPopup) {
+			this.closeTagFilter();
+			return;
+		}
+
+		this.openTagFilter(targetBtn);
+	}
+
+	private closeTagFilter(): void {
+		if (this.tagFilterPopup) {
+			this.tagFilterPopup.remove();
+			this.tagFilterPopup = null;
+			document.removeEventListener('click', this.handleDocumentClick);
+		}
+	}
+
+	private handleDocumentClick = (e: MouseEvent) => {
+		if (this.tagFilterPopup && !this.tagFilterPopup.contains(e.target as Node)) {
+			this.closeTagFilter();
+		}
+	};
+
+	private openTagFilter(targetBtn: HTMLElement): void {
+		const allTags = this.getAllTags();
+		if (allTags.length === 0) return;
+
+		this.tagFilterPopup = document.body.createDiv({ cls: 'kanban-tag-filter-popup' });
+
+		// Position the popup
+		const rect = targetBtn.getBoundingClientRect();
+		this.tagFilterPopup.style.top = `${rect.bottom + 5}px`;
+		this.tagFilterPopup.style.left = `${rect.right - 250}px`; // Align right edge roughly
+
+		// Search input
+		const searchContainer = this.tagFilterPopup.createDiv({ cls: 'kanban-tag-filter-search' });
+		const searchInput = new TextComponent(searchContainer);
+		searchInput.setPlaceholder('Search tags...');
+		searchInput.setValue(this.tagSearchQuery);
+		searchInput.onChange((value) => {
+			this.tagSearchQuery = value;
+			this.renderTagList(listContainer, allTags);
+		});
+
+		// Focus input
+		setTimeout(() => searchInput.inputEl.focus(), 0);
+
+		// Tag list
+		const listContainer = this.tagFilterPopup.createDiv({ cls: 'kanban-tag-filter-list' });
+		this.renderTagList(listContainer, allTags);
+
+		// Close on outside click
+		document.addEventListener('click', this.handleDocumentClick);
+
+		// Prevent clicks inside popup from closing it
+		this.tagFilterPopup.addEventListener('click', (e) => e.stopPropagation());
+	}
+
+	private renderTagList(container: HTMLElement, allTags: string[]): void {
+		container.empty();
+
+		const filteredTags = allTags.filter(tag =>
+			tag.toLowerCase().includes(this.tagSearchQuery.toLowerCase())
+		);
+
+		if (filteredTags.length === 0) {
+			container.createDiv({ cls: 'kanban-tag-filter-empty', text: 'No tags found' });
+			return;
+		}
+
+		// "Select All" / "Clear All" helper if searching
+		if (this.tagSearchQuery) {
+			// Optional: Add helper buttons here if needed
+		}
+
+		filteredTags.forEach(tag => {
+			const item = container.createDiv({ cls: 'kanban-tag-filter-item' });
+			const checkbox = item.createEl('input', {
+				type: 'checkbox',
+				cls: 'kanban-tag-filter-checkbox'
+			});
+			checkbox.checked = this.selectedTags.has(tag);
+
+			item.createSpan({ text: tag, cls: 'kanban-tag-filter-label' });
+
+			item.addEventListener('click', () => {
+				checkbox.checked = !checkbox.checked;
+				if (checkbox.checked) {
+					this.selectedTags.add(tag);
+				} else {
+					this.selectedTags.delete(tag);
 				}
+				this.renderHeader(); // Update button count
+				this.renderBoard(); // Filter board
 			});
-		});
-		
-		header.addEventListener('dragend', () => {
-			column.removeClass('column-dragging');
-			
-			// Remove all visual indicators
-			const allColumns = container.querySelectorAll('.kanban-column');
-			allColumns.forEach(col => {
-				col.removeClass('drop-target-available');
-				col.querySelector('.kanban-column-header')?.removeClass('column-drag-over');
-			});
-		});
-		
-		// Make header a drop target for column reordering
-		header.addEventListener('dragover', (e) => {
-			e.preventDefault();
-			if (e.dataTransfer?.types.includes('text/column-name')) {
-				header.addClass('column-drag-over');
-			}
-		});
-		
-		header.addEventListener('dragleave', (e) => {
-			// Only remove if we're actually leaving the header area
-			if (!header.contains(e.relatedTarget as Node)) {
-				header.removeClass('column-drag-over');
-			}
-		});
-		
-		header.addEventListener('drop', async (e) => {
-			e.preventDefault();
-			header.removeClass('column-drag-over');
-			
-			const draggedColumnName = e.dataTransfer?.getData('text/column-name');
-			if (draggedColumnName && draggedColumnName !== columnName) {
-				await this.reorderColumns(draggedColumnName, columnName);
-			}
-		});
-		
-		const titleContainer = header.createDiv({ cls: 'kanban-column-title-container' });
-		const title = titleContainer.createSpan({ text: columnName, cls: 'kanban-column-title' });
-		const dragHandle = titleContainer.createSpan({ text: '⋮⋮', cls: 'kanban-column-drag-handle' });
-		
-		const headerControls = header.createDiv({ cls: 'kanban-column-controls' });
-		
-		// Add card button
-		const addBtn = headerControls.createEl('button', { 
-			text: '+', 
-			cls: 'kanban-add-card-btn',
-			attr: { title: 'Add new card' }
-		});
-		addBtn.addEventListener('click', () => {
-			new CreateCardModal(this.app, this.dataManager, columnName, () => {
-				this.refresh();
-			}).open();
-		});
 
-		// Column options button
-		const optionsBtn = headerControls.createEl('button', { 
-			text: '⋯', 
-			cls: 'kanban-column-options-btn',
-			attr: { title: 'Column options' }
-		});
-		optionsBtn.addEventListener('click', (e) => {
-			this.showColumnMenu(e, columnName);
-		});
-		
-		if (this.plugin.settings.showFileCount) {
-			const count = header.createSpan({ 
-				cls: 'kanban-column-count',
-				text: ` (${cards.length})`
+			// Prevent double toggle when clicking checkbox directly
+			checkbox.addEventListener('click', (e) => e.stopPropagation());
+			checkbox.addEventListener('change', () => {
+				if (checkbox.checked) {
+					this.selectedTags.add(tag);
+				} else {
+					this.selectedTags.delete(tag);
+				}
+				this.renderHeader();
+				this.renderBoard();
 			});
-		}
-		
-		// Column content
-		const content = column.createDiv({ cls: 'kanban-column-content' });
-		
-		// Make column droppable
-		this.makeDroppable(content, columnName);
-		
-		// Add cards
-		for (const card of cards) {
-			this.createCard(content, card);
-		}
-	}
-
-	private createCard(container: HTMLElement, card: KanbanCard): void {
-		const cardEl = container.createDiv({ cls: 'kanban-card' });
-		cardEl.setAttribute('data-file-path', card.file);
-		
-		// Make card draggable
-		cardEl.draggable = true;
-		cardEl.addEventListener('dragstart', (e) => {
-			this.draggedCard = cardEl;
-			cardEl.addClass('dragging');
-			e.dataTransfer?.setData('text/plain', card.file);
-		});
-		
-		cardEl.addEventListener('dragend', () => {
-			cardEl.removeClass('dragging');
-			this.draggedCard = null;
-		});
-		
-		// Card content based on visible properties
-		this.renderCardContent(cardEl, card);
-		
-		// Click to open file
-		cardEl.addEventListener('click', () => {
-			this.openFile(card.file);
-		});
-		
-		// Right-click context menu
-		cardEl.addEventListener('contextmenu', (e) => {
-			e.preventDefault();
-			this.showCardContextMenu(e, card);
 		});
 	}
 
-	private renderCardContent(cardEl: HTMLElement, card: KanbanCard): void {
-		if (!this.currentBoard) return;
-
-		const visibleProperties = this.currentBoard.visibleProperties;
-		
-		// Always show title
-		if (visibleProperties.includes('title')) {
-			const title = cardEl.createDiv({ cls: 'kanban-card-title', text: card.title });
-		}
-
-		// Show other properties if configured
-		const meta = cardEl.createDiv({ cls: 'kanban-card-meta' });
-		
-		if (visibleProperties.includes('created') && card.created) {
-			meta.createSpan({ 
-				cls: 'kanban-card-date',
-				text: `Created: ${new Date(card.created).toLocaleDateString()}`
-			});
-		}
-
-		if (visibleProperties.includes('modified') && card.modified) {
-			meta.createSpan({ 
-				cls: 'kanban-card-date',
-				text: `Modified: ${new Date(card.modified).toLocaleDateString()}`
-			});
-		}
-
-		if (visibleProperties.includes('tags') && card.frontmatter.tags) {
-			const tags = Array.isArray(card.frontmatter.tags) ? card.frontmatter.tags : [card.frontmatter.tags];
-			if (tags.length > 0) {
-				const tagsEl = meta.createSpan({ cls: 'kanban-card-tags' });
-				tagsEl.textContent = `Tags: ${tags.join(', ')}`;
-			}
-		}
-
-		// Show custom frontmatter properties
-		visibleProperties.forEach(prop => {
-			if (!['title', 'created', 'modified', 'tags'].includes(prop) && card.frontmatter[prop]) {
-				meta.createSpan({ 
-					cls: 'kanban-card-property',
-					text: `${prop}: ${card.frontmatter[prop]}`
-				});
+	private getAllTags(): string[] {
+		const tags = new Set<string>();
+		this.cards.forEach(card => {
+			if (card.frontmatter.tags) {
+				const cardTags = Array.isArray(card.frontmatter.tags)
+					? card.frontmatter.tags
+					: [card.frontmatter.tags];
+				cardTags.forEach((t: string) => tags.add(t.replace('#', '')));
 			}
 		});
-	}
-
-	private showColumnMenu(event: MouseEvent, columnName: string): void {
-		const menu = new Menu();
-		
-		// Allow deletion of both custom and default columns
-		menu.addItem((item) => {
-			item.setTitle('Delete Column')
-				.setIcon('trash')
-				.onClick(async () => {
-					// Check if it's a default column or custom column
-					if (this.currentBoard?.defaultColumns.includes(columnName)) {
-						// Remove from default columns
-						const newDefaultColumns = this.currentBoard.defaultColumns.filter(col => col !== columnName);
-						this.plugin.boardManager.updateBoard(this.currentBoard.id, { defaultColumns: newDefaultColumns });
-					} else if (this.currentBoard?.customColumns.includes(columnName)) {
-						// Remove from custom columns
-						this.plugin.boardManager.removeColumnFromBoard(this.currentBoard.id, columnName);
-					}
-					
-					await this.plugin.saveSettings();
-					await this.refresh();
-				});
-		});
-		
-		// Add rename option
-		menu.addItem((item) => {
-			item.setTitle('Rename Column')
-				.setIcon('pencil')
-				.onClick(() => {
-					new RenameColumnModal(this.app, this.plugin, this.currentBoard!.id, columnName, () => {
-						this.refresh();
-					}).open();
-				});
-		});
-		
-		menu.showAtMouseEvent(event);
+		return Array.from(tags).sort();
 	}
 
 	private async reorderColumns(draggedColumn: string, targetColumn: string): Promise<void> {
 		if (!this.currentBoard) return;
-		
+
 		const currentOrder = this.columns;
 		const draggedIndex = currentOrder.indexOf(draggedColumn);
 		const targetIndex = currentOrder.indexOf(targetColumn);
-		
+
 		if (draggedIndex === -1 || targetIndex === -1) return;
-		
+
 		// Create new order
 		const newOrder = [...currentOrder];
 		newOrder.splice(draggedIndex, 1);
 		newOrder.splice(targetIndex, 0, draggedColumn);
-		
+
 		// Update board configuration
 		this.plugin.boardManager.updateColumnOrder(this.currentBoard.id, newOrder);
 		await this.plugin.saveSettings();
 		await this.refresh();
 	}
 
-	private makeDroppable(element: HTMLElement, columnName: string): void {
-		element.addEventListener('dragover', (e) => {
-			e.preventDefault();
-			element.addClass('drag-over');
-		});
-		
-		element.addEventListener('dragleave', () => {
-			element.removeClass('drag-over');
-		});
-		
-		element.addEventListener('drop', async (e) => {
-			e.preventDefault();
-			element.removeClass('drag-over');
-			
-			const filePath = e.dataTransfer?.getData('text/plain');
-			if (filePath && this.draggedCard) {
-				await this.moveCard(filePath, columnName);
-			}
-		});
-	}
-
 	private async moveCard(filePath: string, newColumn: string): Promise<void> {
 		try {
 			await this.dataManager.updateCardColumn(filePath, newColumn);
-			await this.refresh(); // Refresh to show the updated position
+			this.cards = await this.dataManager.getKanbanCards();
+
+			// Run automations
+			await this.dataManager.runAutomations(this.cards);
+
+			// Re-fetch cards if automations might have changed them (e.g. archived)
+			// Optimization: We could return modified cards from runAutomations to avoid re-fetch
+			// For now, simple re-fetch ensures consistency
+			if (this.currentBoard?.autoMoveCompleted || (this.currentBoard?.autoArchiveDelay ?? 0) > 0) {
+				this.cards = await this.dataManager.getKanbanCards();
+			}
+
+			this.columns = this.dataManager.getColumns(this.cards);
 		} catch (error) {
 			console.error('Failed to move card:', error);
+			await this.refresh();
+		}
+	}
+
+	private async archiveCard(card: KanbanCard): Promise<void> {
+		try {
+			await this.dataManager.archiveCard(card.file);
+			// Refresh to remove the card from view
+			// Note: File watcher might trigger refresh too, but this ensures immediate feedback if watcher is slow
+			// or if we want to be sure.
+			// Actually, let's rely on watcher or manual refresh if needed, but for archive it's better to refresh immediately
+			// to show it's gone.
+			// But wait, if we rely on watcher, we might get double refresh.
+			// Let's just wait for watcher.
+		} catch (error) {
+			console.error('Failed to archive card:', error);
 		}
 	}
 
@@ -441,334 +630,5 @@ export class KanbanView extends ItemView {
 		if (file instanceof TFile) {
 			this.app.workspace.getLeaf().openFile(file);
 		}
-	}
-
-	private showCardContextMenu(event: MouseEvent, card: KanbanCard): void {
-		const menu = new Menu();
-		
-		menu.addItem((item) => {
-			item.setTitle('Open')
-				.setIcon('file-text')
-				.onClick(() => this.openFile(card.file));
-		});
-		
-		menu.addItem((item) => {
-			item.setTitle('Open in new tab')
-				.setIcon('file-plus')
-				.onClick(() => {
-					const file = this.app.vault.getAbstractFileByPath(card.file);
-					if (file instanceof TFile) {
-						this.app.workspace.getLeaf('tab').openFile(file);
-					}
-				});
-		});
-		
-		menu.addSeparator();
-		
-		// Add move options for each column
-		for (const column of this.columns) {
-			if (column !== card.column) {
-				menu.addItem((item) => {
-					item.setTitle(`Move to "${column}"`)
-						.setIcon('arrow-right')
-						.onClick(() => this.moveCard(card.file, column));
-				});
-			}
-		}
-		
-		menu.showAtMouseEvent(event);
-	}
-
-	private addStyles(): void {
-		// Add CSS styles if they don't exist
-		if (!document.getElementById('kanban-board-styles')) {
-			const style = document.createElement('style');
-			style.id = 'kanban-board-styles';
-			style.textContent = `
-				.kanban-header {
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					padding: 16px;
-					border-bottom: 1px solid var(--background-modifier-border);
-				}
-				
-				.kanban-board-title {
-					margin: 0;
-					color: var(--text-normal);
-				}
-				
-				.kanban-board-controls {
-					display: flex;
-					gap: 8px;
-					align-items: center;
-				}
-				
-				.kanban-board-selector {
-					padding: 4px 8px;
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 4px;
-					background: var(--background-primary);
-					color: var(--text-normal);
-				}
-				
-				.kanban-refresh-btn {
-					padding: 4px 8px;
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 4px;
-					background: var(--background-primary);
-					color: var(--text-normal);
-					cursor: pointer;
-				}
-				
-				.kanban-refresh-btn:hover {
-					background: var(--background-modifier-hover);
-				}
-				
-				.kanban-board {
-					display: flex;
-					gap: 16px;
-					padding: 16px;
-					overflow-x: auto;
-					height: calc(100% - 80px);
-				}
-				
-				.kanban-column {
-					min-width: 280px;
-					background: var(--background-secondary);
-					border-radius: 8px;
-					flex-shrink: 0;
-				}
-				
-				.kanban-column-header {
-					padding: 12px 16px;
-					border-bottom: 1px solid var(--background-modifier-border);
-					font-weight: 600;
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-				}
-				
-				.kanban-column-controls {
-					display: flex;
-					gap: 4px;
-				}
-				
-				.kanban-add-card-btn, .kanban-column-options-btn {
-					background: none;
-					border: none;
-					color: var(--text-muted);
-					cursor: pointer;
-					padding: 2px 6px;
-					border-radius: 3px;
-					font-size: 14px;
-				}
-				
-				.kanban-add-card-btn:hover, .kanban-column-options-btn:hover {
-					background: var(--background-modifier-hover);
-					color: var(--text-normal);
-				}
-				
-				.kanban-column-count {
-					color: var(--text-muted);
-					font-size: 0.9em;
-				}
-				
-				.kanban-column-content {
-					padding: 8px;
-					min-height: 200px;
-				}
-				
-				.kanban-column-content.drag-over {
-					background: var(--background-modifier-hover);
-				}
-				
-				.kanban-card {
-					background: var(--background-primary);
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 6px;
-					padding: 12px;
-					margin-bottom: 8px;
-					cursor: pointer;
-					transition: all 0.2s ease;
-				}
-				
-				.kanban-card:hover {
-					border-color: var(--interactive-accent);
-					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-				}
-				
-				.kanban-card.dragging {
-					opacity: 0.5;
-					transform: rotate(5deg);
-				}
-				
-				.kanban-card-title {
-					font-weight: 500;
-					margin-bottom: 8px;
-					word-wrap: break-word;
-				}
-				
-				.kanban-card-meta {
-					font-size: 0.8em;
-					color: var(--text-muted);
-				}
-				
-				.kanban-card-date, .kanban-card-tags, .kanban-card-property {
-					display: block;
-					margin-bottom: 2px;
-				}
-				
-				.kanban-error {
-					padding: 20px;
-					text-align: center;
-					color: var(--text-muted);
-				}
-			`;
-			document.head.appendChild(style);
-		}
-	}
-}
-
-class CreateCardModal extends Modal {
-	private titleInput: TextComponent;
-
-	constructor(app: App, private dataManager: DataManager, private columnName: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: `Create New Card in "${this.columnName}"` });
-
-		new Setting(contentEl)
-			.setName('Card Title')
-			.addText(text => {
-				this.titleInput = text;
-				text.setPlaceholder('Enter card title...');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Create')
-				.setCta()
-				.onClick(async () => {
-					const title = this.titleInput.getValue().trim();
-					
-					if (title) {
-						await this.dataManager.createNewCard(this.columnName, title);
-						this.close();
-						this.onSubmit();
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class AddColumnModal extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Add Custom Column' });
-
-		new Setting(contentEl)
-			.setName('Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder('New Column');
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Add')
-				.setCta()
-				.onClick(async () => {
-					const columnName = this.columnInput.getValue().trim();
-					
-					if (columnName) {
-						const success = this.plugin.boardManager.addColumnToBoard(this.boardId, columnName);
-						if (success) {
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllViews();
-							this.close();
-							this.onSubmit();
-						}
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
-	}
-}
-
-class RenameColumnModal extends Modal {
-	private columnInput: TextComponent;
-
-	constructor(app: App, private plugin: KanbanPlugin, private boardId: string, private oldColumnName: string, private onSubmit: () => void) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: `Rename Column: ${this.oldColumnName}` });
-
-		new Setting(contentEl)
-			.setName('New Column Name')
-			.addText(text => {
-				this.columnInput = text;
-				text.setPlaceholder(this.oldColumnName);
-				text.setValue(this.oldColumnName);
-				text.inputEl.select();
-			});
-
-		new Setting(contentEl)
-			.addButton(button => button
-				.setButtonText('Rename')
-				.setCta()
-				.onClick(async () => {
-					const newColumnName = this.columnInput.getValue().trim();
-					
-					if (newColumnName && newColumnName !== this.oldColumnName) {
-						const board = this.plugin.boardManager.getBoard(this.boardId);
-						if (!board) return;
-
-						// Handle renaming for default columns
-						if (board.defaultColumns.includes(this.oldColumnName)) {
-							const newDefaultColumns = board.defaultColumns.map(col => 
-								col === this.oldColumnName ? newColumnName : col
-							);
-							this.plugin.boardManager.updateBoard(this.boardId, { defaultColumns: newDefaultColumns });
-						}
-						
-						// Handle renaming for custom columns
-						if (board.customColumns.includes(this.oldColumnName)) {
-							this.plugin.boardManager.removeColumnFromBoard(this.boardId, this.oldColumnName);
-							this.plugin.boardManager.addColumnToBoard(this.boardId, newColumnName);
-						}
-
-						// Update column order if it exists
-						if (board.columnOrder.includes(this.oldColumnName)) {
-							const newOrder = board.columnOrder.map(col => 
-								col === this.oldColumnName ? newColumnName : col
-							);
-							this.plugin.boardManager.updateColumnOrder(this.boardId, newOrder);
-						}
-
-						await this.plugin.saveSettings();
-						this.plugin.refreshAllViews();
-						this.close();
-						this.onSubmit();
-					}
-				}))
-			.addButton(button => button
-				.setButtonText('Cancel')
-				.onClick(() => this.close()));
 	}
 }

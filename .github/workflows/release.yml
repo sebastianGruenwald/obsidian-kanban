@@ -1,5 +1,9 @@
 name: Release Obsidian Plugin
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     tags:
@@ -30,7 +34,6 @@ jobs:
 
           gh release create "$tag" \
             --title="$tag" \
-            --draft \
             main.js manifest.json styles.css
 
       - name: Upload zip file
@@ -40,8 +43,8 @@ jobs:
           tag="${GITHUB_REF#refs/tags/}"
           
           # Create a zip file for the release
-          mkdir obsidian-kanban-board
-          cp main.js manifest.json styles.css obsidian-kanban-board/
-          zip -r obsidian-kanban-board.zip obsidian-kanban-board/
+          mkdir obsidian-kanban
+          cp main.js manifest.json styles.css obsidian-kanban/
+          zip -r obsidian-kanban.zip obsidian-kanban/
           
-          gh release upload "$tag" obsidian-kanban-board.zip
+          gh release upload "$tag" obsidian-kanban.zip

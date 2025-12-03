@@ -1,3 +1,4 @@
+````markdown
 # Enhanced Examples for Multi-Board Kanban Plugin
 
 This document shows how to use the enhanced kanban plugin with multiple boards, custom columns, and configurable properties.
@@ -284,3 +285,4 @@ As a [user], I want [goal] so that [benefit].
 ```
 
 This enhanced plugin supports complex workflows while maintaining simplicity for basic use cases.
+````
