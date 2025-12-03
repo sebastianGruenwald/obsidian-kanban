@@ -1,0 +1,45 @@
+{
+  "boards": [
+    {
+      "id": "default",
+      "name": "Default Kanban",
+      "tagFilter": "#kanban",
+      "columnProperty": "status",
+      "defaultColumns": [
+        "To Do",
+        "In Progress",
+        "Done"
+      ],
+      "customColumns": [],
+      "columnWidths": {},
+      "columnOrder": [],
+      "visibleProperties": [
+        "title",
+        "created",
+        "tags"
+      ],
+      "sortBy": "creation",
+      "sortOrder": "desc",
+      "cardDensity": "comfortable",
+      "tagColors": {},
+      "showColumnBackgrounds": false,
+      "colorfulHeaders": true,
+      "showCardColors": true,
+      "wipLimits": {},
+      "cardAging": false,
+      "cardAgingThreshold": 7,
+      "autoMoveCompleted": false,
+      "autoArchiveDelay": 0,
+      "swimlaneProperty": null
+    }
+  ],
+  "activeBoard": "default",
+  "autoRefresh": true,
+  "showFileCount": true,
+  "cardTemplate": "",
+  "defaultVisibleProperties": [
+    "title",
+    "created",
+    "modified"
+  ]
+}

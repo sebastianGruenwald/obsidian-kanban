@@ -256,6 +256,33 @@ export class DataManager {
 		}
 	}
 
+	async updateCardTags(cardPath: string, tags: string[]): Promise<void> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(cardPath);
+			if (!(file instanceof TFile)) {
+				throw new Error('File not found');
+			}
+
+			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				// Ensure tags are properly formatted (without # prefix for frontmatter)
+				const cleanTags = tags.map(tag => tag.replace(/^#/, ''));
+				
+				if (cleanTags.length === 0) {
+					delete frontmatter.tags;
+				} else if (cleanTags.length === 1) {
+					frontmatter.tags = cleanTags[0];
+				} else {
+					frontmatter.tags = cleanTags;
+				}
+			});
+		} catch (error) {
+			console.error('Error updating card tags:', error);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			showError(`Failed to update tags: ${message}`);
+			throw error;
+		}
+	}
+
 	// Helper methods removed as they are replaced by app.fileManager.processFrontMatter
 
 	async runAutomations(cards: KanbanCard[]): Promise<void> {

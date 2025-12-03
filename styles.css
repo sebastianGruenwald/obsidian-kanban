@@ -1071,11 +1071,62 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
   color: var(--k-text-muted);
   transition: all var(--k-transition-fast);
   border: 1px solid transparent;
+  cursor: default;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .kanban-card-tag:hover {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
+}
+
+/* Remove button for tags */
+.kanban-tag-remove {
+  opacity: 0;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 2px;
+  transition: opacity var(--k-transition-fast);
+}
+
+.kanban-card-tag:hover .kanban-tag-remove {
+  opacity: 1;
+}
+
+.kanban-tag-remove:hover {
+  color: var(--text-error);
+}
+
+/* Add tag button */
+.kanban-tag-add {
+  opacity: 0.6;
+  cursor: pointer;
+  border-style: dashed;
+}
+
+.kanban-tag-add:hover {
+  opacity: 1;
+  background: var(--interactive-hover);
+}
+
+/* Tag input wrapper */
+.kanban-tag-input-wrapper {
+  display: inline-block;
+}
+
+.kanban-tag-input {
+  font-size: var(--k-font-tag);
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--interactive-accent);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  width: 100px;
+  outline: none;
 }
 
 .kanban-card-property {

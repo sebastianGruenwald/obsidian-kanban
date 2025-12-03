@@ -108,15 +108,18 @@ export class KanbanCardComponent {
 		// Container for tags and properties
 		const body = cardEl.createDiv({ cls: 'kanban-card-body' });
 
-		if (visibleProperties.includes('tags') && this.card.frontmatter.tags) {
-			const tags = Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags];
+		if (visibleProperties.includes('tags')) {
+			const tags = this.card.frontmatter.tags 
+				? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
+				: [];
 
 			// Filter out the board tag
 			const boardTag = this.boardConfig.tagFilter?.replace('#', '');
 			const displayTags = tags.filter((t: string) => t.replace('#', '') !== boardTag);
 
+			const tagsContainer = body.createDiv({ cls: 'kanban-card-tags-container' });
+			
 			if (displayTags.length > 0) {
-				const tagsContainer = body.createDiv({ cls: 'kanban-card-tags-container' });
 				displayTags.forEach((tag: string) => {
 					const cleanTag = tag.replace('#', '');
 					const tagEl = tagsContainer.createSpan({ cls: 'kanban-card-tag', text: cleanTag });
@@ -128,8 +131,22 @@ export class KanbanCardComponent {
 						tagEl.style.color = '#ffffff'; // Assuming dark colors for now
 						tagEl.style.borderColor = color;
 					}
+
+					// Add remove button
+					const removeBtn = tagEl.createSpan({ cls: 'kanban-tag-remove', text: '×' });
+					removeBtn.addEventListener('click', async (e) => {
+						e.stopPropagation();
+						await this.removeTag(cleanTag);
+					});
 				});
 			}
+
+			// Add "+ tag" button
+			const addTagBtn = tagsContainer.createSpan({ cls: 'kanban-card-tag kanban-tag-add', text: '+ tag' });
+			addTagBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				this.showAddTagInput(tagsContainer, addTagBtn);
+			});
 		}
 
 		// Show custom frontmatter properties
@@ -369,5 +386,98 @@ export class KanbanCardComponent {
 			const opacity = 1.0 - (agingFactor * 0.4);
 			cardEl.style.setProperty('--aging-opacity', opacity.toString());
 		}
+	}
+
+	private async removeTag(tagToRemove: string): Promise<void> {
+		if (!this.dataManager) return;
+
+		try {
+			const tags = this.card.frontmatter.tags 
+				? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
+				: [];
+
+			const boardTag = this.boardConfig.tagFilter?.replace('#', '');
+			const updatedTags = tags
+				.map((t: string) => t.replace('#', ''))
+				.filter((t: string) => t !== tagToRemove);
+
+			// Always keep the board tag
+			if (boardTag && !updatedTags.includes(boardTag)) {
+				updatedTags.push(boardTag);
+			}
+
+			await this.dataManager.updateCardTags(this.card.file, updatedTags);
+			
+			if (this.onTitleChange) {
+				this.onTitleChange();
+			}
+		} catch (error) {
+			console.error('Failed to remove tag:', error);
+		}
+	}
+
+	private showAddTagInput(container: HTMLElement, addBtn: HTMLElement): void {
+		if (!this.dataManager) return;
+
+		// Hide the add button temporarily
+		addBtn.style.display = 'none';
+
+		// Create input element
+		const inputWrapper = container.createSpan({ cls: 'kanban-tag-input-wrapper' });
+		const input = inputWrapper.createEl('input', {
+			cls: 'kanban-tag-input',
+			attr: { 
+				type: 'text',
+				placeholder: 'tag name'
+			}
+		});
+
+		input.addEventListener('click', (e) => e.stopPropagation());
+
+		const finishAdd = async (save: boolean) => {
+			const newTag = input.value.trim().replace(/^#/, '');
+			
+			if (save && newTag && this.dataManager) {
+				try {
+					const tags = this.card.frontmatter.tags 
+						? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
+						: [];
+
+					const cleanTags = tags.map((t: string) => t.replace('#', ''));
+					
+					// Add new tag if it doesn't exist
+					if (!cleanTags.includes(newTag)) {
+						cleanTags.push(newTag);
+						await this.dataManager.updateCardTags(this.card.file, cleanTags);
+						
+						if (this.onTitleChange) {
+							this.onTitleChange();
+						}
+					}
+				} catch (error) {
+					console.error('Failed to add tag:', error);
+				}
+			}
+
+			inputWrapper.remove();
+			addBtn.style.display = '';
+		};
+
+		input.addEventListener('keydown', async (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				await finishAdd(true);
+			} else if (e.key === 'Escape') {
+				await finishAdd(false);
+			}
+		});
+
+		input.addEventListener('blur', async () => {
+			setTimeout(() => finishAdd(true), 100);
+		});
+
+		setTimeout(() => {
+			input.focus();
+		}, 0);
 	}
 }
