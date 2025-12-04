@@ -180,12 +180,15 @@ export class KanbanView extends ItemView {
 				{
 					onCardMove: (filePath, newColumn) => this.moveCard(filePath, newColumn),
 					onCardArchive: (card) => this.archiveCard(card),
-					onColumnRename: () => this.refresh(),
-					onColumnDelete: async () => {
+				onColumnRename: () => this.refresh(),
+				onColumnDelete: async () => {
+					if (this.currentBoard) {
+						this.plugin.boardManager.removeColumnFromBoard(this.currentBoard.id, columnName);
 						await this.plugin.saveSettings();
 						await this.refresh();
-					},
-					onColumnReorder: (draggedColumn, targetColumn) => { },
+					}
+				},
+				onColumnReorder: (draggedColumn, targetColumn) => { },
 					onColumnResize: async (width) => {
 						if (this.currentBoard) {
 							const columnWidths = this.currentBoard.columnWidths || {};
@@ -273,8 +276,11 @@ export class KanbanView extends ItemView {
 						onCardArchive: (card) => this.archiveCard(card),
 						onColumnRename: () => this.refresh(),
 						onColumnDelete: async () => {
-							await this.plugin.saveSettings();
-							await this.refresh();
+							if (this.currentBoard) {
+								this.plugin.boardManager.removeColumnFromBoard(this.currentBoard.id, columnName);
+								await this.plugin.saveSettings();
+								await this.refresh();
+							}
 						},
 						onColumnReorder: () => { },
 						onColumnResize: () => { },

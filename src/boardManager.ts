@@ -71,6 +71,12 @@ export class BoardManager {
 			board.customColumns.splice(customIndex, 1);
 		}
 
+		// Remove from default columns
+		const defaultIndex = board.defaultColumns.indexOf(columnName);
+		if (defaultIndex > -1) {
+			board.defaultColumns.splice(defaultIndex, 1);
+		}
+
 		// Remove from column order
 		const orderIndex = board.columnOrder.indexOf(columnName);
 		if (orderIndex > -1) {
