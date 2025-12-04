@@ -15,8 +15,7 @@
       "columnOrder": [],
       "visibleProperties": [
         "title",
-        "created",
-        "tags"
+        "created"
       ],
       "sortBy": "creation",
       "sortOrder": "desc",

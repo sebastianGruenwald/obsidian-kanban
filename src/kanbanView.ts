@@ -20,6 +20,8 @@ export class KanbanView extends ItemView {
 	private selectedTags: Set<string> = new Set();
 	private tagSearchQuery: string = '';
 	private tagFilterPopup: HTMLElement | null = null;
+	private themePopup: HTMLElement | null = null;
+	private propsPopup: HTMLElement | null = null;
 	private headerContainer: HTMLElement | null = null;
 	private boardContainer: HTMLElement | null = null;
 
@@ -443,14 +445,63 @@ export class KanbanView extends ItemView {
 			e.stopPropagation();
 			this.toggleTagFilter(filterBtn);
 		});
+
+		// Theme selector button
+		const themeBtn = controls.createEl('button', {
+			cls: 'kanban-theme-btn',
+			attr: { title: 'Change Board Theme' }
+		});
+		setIcon(themeBtn, 'palette');
+
+		themeBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (this.themePopup) {
+				this.closeAllPopups();
+			} else {
+				this.closeAllPopups();
+				this.showThemeSelector(themeBtn);
+			}
+		});
+
+		// Properties toggle button
+		const propsBtn = controls.createEl('button', {
+			cls: 'kanban-props-btn',
+			attr: { title: 'Toggle Visible Properties' }
+		});
+		setIcon(propsBtn, 'eye');
+
+		propsBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (this.propsPopup) {
+				this.closeAllPopups();
+			} else {
+				this.closeAllPopups();
+				this.showPropertiesToggle(propsBtn);
+			}
+		});
+	}
+
+	private closeAllPopups(): void {
+		if (this.tagFilterPopup) {
+			this.closeTagFilter();
+		}
+		if (this.themePopup) {
+			this.themePopup.remove();
+			this.themePopup = null;
+		}
+		if (this.propsPopup) {
+			this.propsPopup.remove();
+			this.propsPopup = null;
+		}
 	}
 
 	private toggleTagFilter(targetBtn: HTMLElement): void {
 		if (this.tagFilterPopup) {
-			this.closeTagFilter();
+			this.closeAllPopups();
 			return;
 		}
 
+		this.closeAllPopups();
 		this.openTagFilter(targetBtn);
 	}
 
@@ -553,6 +604,144 @@ export class KanbanView extends ItemView {
 				this.renderBoard();
 			});
 		});
+	}
+
+	private showThemeSelector(targetBtn: HTMLElement): void {
+		this.themePopup = document.body.createDiv({ cls: 'kanban-theme-popup' });
+		const popup = this.themePopup;
+
+		// Position the popup
+		const rect = targetBtn.getBoundingClientRect();
+		popup.style.position = 'fixed';
+		popup.style.top = `${rect.bottom + 5}px`;
+		popup.style.right = `${window.innerWidth - rect.right}px`;
+
+		popup.createEl('div', { text: 'Board Theme', cls: 'kanban-popup-title' });
+
+		const themes = [
+			{ value: 'default', label: 'Modern (Default)', icon: 'layout-grid' },
+			{ value: 'sticky-notes', label: 'Sticky Notes', icon: 'sticky-note' }
+		];
+
+		themes.forEach(theme => {
+			const item = popup.createDiv({ cls: 'kanban-popup-item' });
+			const isActive = document.body.classList.contains(`theme-${theme.value}`);
+			
+			if (isActive) {
+				item.addClass('is-active');
+			}
+
+			const iconEl = item.createSpan({ cls: 'kanban-popup-item-icon' });
+			setIcon(iconEl, theme.icon);
+			item.createSpan({ text: theme.label, cls: 'kanban-popup-item-label' });
+
+			item.addEventListener('click', () => {
+				// Remove all theme classes
+				document.body.classList.remove('theme-default', 'theme-sticky-notes');
+				// Add selected theme
+				document.body.classList.add(`theme-${theme.value}`);
+				this.closeAllPopups();
+			});
+		});
+
+		// Close on click outside
+		const closePopup = (e: MouseEvent) => {
+			if (!popup.contains(e.target as Node) && e.target !== targetBtn) {
+				this.closeAllPopups();
+				document.removeEventListener('click', closePopup);
+			}
+		};
+		setTimeout(() => document.addEventListener('click', closePopup), 0);
+	}
+
+	private showPropertiesToggle(targetBtn: HTMLElement): void {
+		if (!this.currentBoard) return;
+
+		this.propsPopup = document.body.createDiv({ cls: 'kanban-props-popup' });
+		const popup = this.propsPopup;
+
+		// Position the popup
+		const rect = targetBtn.getBoundingClientRect();
+		popup.style.position = 'fixed';
+		popup.style.top = `${rect.bottom + 5}px`;
+		popup.style.right = `${window.innerWidth - rect.right}px`;
+
+		popup.createEl('div', { text: 'Visible Properties', cls: 'kanban-popup-title' });
+
+		// Gather all unique properties from cards
+		const allCardProperties = new Set<string>();
+		this.cards.forEach(card => {
+			if (card.frontmatter) {
+				Object.keys(card.frontmatter).forEach(key => {
+					// Exclude internal properties
+					if (!['position'].includes(key) && key !== this.currentBoard!.columnProperty) {
+						allCardProperties.add(key);
+					}
+				});
+			}
+		});
+
+		const standardProps = ['title', 'created', 'modified', 'tags'];
+		const customProps = Array.from(allCardProperties)
+			.filter(p => !standardProps.includes(p))
+			.sort();
+
+		const availableProperties = [
+			{ key: 'title', label: 'Title' },
+			{ key: 'created', label: 'Created Date' },
+			{ key: 'modified', label: 'Modified Date' },
+			{ key: 'tags', label: 'Tags' },
+			...customProps.map(p => ({ key: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))
+		];
+
+		availableProperties.forEach(prop => {
+			const item = popup.createDiv({ cls: 'kanban-popup-item kanban-popup-checkbox-item' });
+			
+			const checkbox = item.createEl('input', {
+				type: 'checkbox',
+				cls: 'kanban-popup-checkbox'
+			});
+			checkbox.checked = this.currentBoard!.visibleProperties.includes(prop.key);
+
+			item.createSpan({ text: prop.label, cls: 'kanban-popup-item-label' });
+
+			const toggleProperty = async () => {
+				const currentProps = this.currentBoard!.visibleProperties;
+				let newProps: string[];
+				
+				if (checkbox.checked) {
+					newProps = currentProps.includes(prop.key) 
+						? currentProps 
+						: [...currentProps, prop.key];
+				} else {
+					newProps = currentProps.filter(p => p !== prop.key);
+				}
+
+				// Remove duplicates
+				newProps = [...new Set(newProps)];
+
+				this.plugin.boardManager.updateBoard(this.currentBoard!.id, { visibleProperties: newProps });
+				await this.plugin.saveSettings();
+				await this.refresh();
+			};
+
+			item.addEventListener('click', async () => {
+				checkbox.checked = !checkbox.checked;
+				await toggleProperty();
+			});
+
+			checkbox.addEventListener('click', (e) => e.stopPropagation());
+			checkbox.addEventListener('change', toggleProperty);
+		});
+
+		// Close on click outside
+		const closePopup = (e: MouseEvent) => {
+			if (!popup.contains(e.target as Node) && e.target !== targetBtn) {
+				this.closeAllPopups();
+				document.removeEventListener('click', closePopup);
+			}
+		};
+		setTimeout(() => document.addEventListener('click', closePopup), 0);
 	}
 
 	private getAllTags(): string[] {

@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Welcome.md",
+                "file": "todo 1.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Welcome"
+              "title": "Outline of todo 1"
             }
           },
           {
@@ -194,11 +194,11 @@
       "obsidian-kanban:Open Kanban Board": false
     }
   },
-  "active": "54d4a9b0076b09ea",
+  "active": "286113283e4ee9e1",
   "lastOpenFiles": [
     "test.md",
-    "todo 1.md",
     "test 2.md",
+    "todo 1.md",
     "Welcome.md"
   ]
 }
