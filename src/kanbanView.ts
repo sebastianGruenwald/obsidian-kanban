@@ -5,12 +5,15 @@ import KanbanPlugin from './main';
 import { AddColumnModal } from './modals';
 import { VIEW_TYPE_KANBAN } from './constants';
 import { KanbanColumnComponent } from './components/KanbanColumnComponent';
+import { errorHandler } from './errorHandler';
+import { SearchFilterService } from './services/SearchFilterService';
 import Sortable from 'sortablejs';
 
 export { VIEW_TYPE_KANBAN };
 
 export class KanbanView extends ItemView {
 	private dataManager!: DataManager;
+	private searchFilterService: SearchFilterService = new SearchFilterService();
 	private cards: KanbanCard[] = [];
 	private columns: string[] = [];
 	private draggedCard: HTMLElement | null = null;
@@ -147,23 +150,10 @@ export class KanbanView extends ItemView {
 			});
 		}
 
-		// Filter cards based on search query and tags
-		const filteredCards = this.cards.filter(card => {
-			const matchesSearch = !this.searchQuery ||
-				card.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-				card.content.toLowerCase().includes(this.searchQuery.toLowerCase());
-
-			if (!matchesSearch) return false;
-
-			if (this.selectedTags.size === 0) return true;
-
-			const cardTags = card.frontmatter.tags
-				? (Array.isArray(card.frontmatter.tags) ? card.frontmatter.tags : [card.frontmatter.tags])
-				: [];
-
-			// Check if card has ANY of the selected tags
-			const cleanCardTags = cardTags.map((t: string) => t.replace('#', ''));
-			return cleanCardTags.some((t: string) => this.selectedTags.has(t));
+		// Filter cards using SearchFilterService
+		const filteredCards = this.searchFilterService.filterCards(this.cards, {
+			searchQuery: this.searchQuery,
+			selectedTags: this.selectedTags
 		});
 
 		if (this.currentBoard?.swimlaneProperty) {
@@ -309,27 +299,23 @@ export class KanbanView extends ItemView {
 	}
 
 	private async moveCardToSwimlane(filePath: string, newColumn: string, swimlaneProp: string, swimlaneValue: string): Promise<void> {
-		try {
-			const file = this.app.vault.getAbstractFileByPath(filePath);
-			if (file instanceof TFile) {
-				await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-					frontmatter[this.currentBoard!.columnProperty] = newColumn;
-					// If value is 'Unassigned', we might want to remove the property or set it to null/empty
-					// But for now let's set it to null if it was 'Unassigned' and the property existed, 
-					// or just don't set it if we want to keep it clean. 
-					// Actually, if we drag to 'Unassigned' row, we should probably remove the property or set to null.
-					if (swimlaneValue === 'Unassigned') {
-						delete frontmatter[swimlaneProp];
-					} else {
-						frontmatter[swimlaneProp] = swimlaneValue;
-					}
-				});
-				// Refresh is handled by file watcher usually, but let's force it to be snappy
-				await this.refresh();
-			}
-		} catch (error) {
-			console.error('Failed to move card to swimlane:', error);
-		}
+		await errorHandler.wrap(
+			async () => {
+				const file = this.app.vault.getAbstractFileByPath(filePath);
+				if (file instanceof TFile) {
+					await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+						frontmatter[this.currentBoard!.columnProperty] = newColumn;
+						if (swimlaneValue === 'Unassigned') {
+							delete frontmatter[swimlaneProp];
+						} else {
+							frontmatter[swimlaneProp] = swimlaneValue;
+						}
+					});
+					await this.refresh();
+				}
+			},
+			{ context: 'card-move', action: 'moveCardToSwimlane' }
+		)();
 	}
 
 	private createBoardHeader(container: HTMLElement): void {
@@ -765,16 +751,7 @@ export class KanbanView extends ItemView {
 	}
 
 	private getAllTags(): string[] {
-		const tags = new Set<string>();
-		this.cards.forEach(card => {
-			if (card.frontmatter.tags) {
-				const cardTags = Array.isArray(card.frontmatter.tags)
-					? card.frontmatter.tags
-					: [card.frontmatter.tags];
-				cardTags.forEach((t: string) => tags.add(t.replace('#', '')));
-			}
-		});
-		return Array.from(tags).sort();
+		return this.searchFilterService.getAllTags(this.cards);
 	}
 
 	private async reorderColumns(draggedColumn: string, targetColumn: string): Promise<void> {
@@ -798,40 +775,33 @@ export class KanbanView extends ItemView {
 	}
 
 	private async moveCard(filePath: string, newColumn: string): Promise<void> {
-		try {
-			await this.dataManager.updateCardColumn(filePath, newColumn);
-			this.cards = await this.dataManager.getKanbanCards();
-
-			// Run automations
-			await this.dataManager.runAutomations(this.cards);
-
-			// Re-fetch cards if automations might have changed them (e.g. archived)
-			// Optimization: We could return modified cards from runAutomations to avoid re-fetch
-			// For now, simple re-fetch ensures consistency
-			if (this.currentBoard?.autoMoveCompleted || (this.currentBoard?.autoArchiveDelay ?? 0) > 0) {
+		await errorHandler.wrap(
+			async () => {
+				await this.dataManager.updateCardColumn(filePath, newColumn);
 				this.cards = await this.dataManager.getKanbanCards();
-			}
 
-			this.columns = this.dataManager.getColumns(this.cards);
-		} catch (error) {
-			console.error('Failed to move card:', error);
-			await this.refresh();
-		}
+				// Run automations
+				await this.dataManager.runAutomations(this.cards);
+
+				// Re-fetch cards if automations might have changed them (e.g. archived)
+				if (this.currentBoard?.autoMoveCompleted || (this.currentBoard?.autoArchiveDelay ?? 0) > 0) {
+					this.cards = await this.dataManager.getKanbanCards();
+				}
+
+				this.columns = this.dataManager.getColumns(this.cards);
+			},
+			{ context: 'card-move', action: 'moveCard' }
+		)();
 	}
 
 	private async archiveCard(card: KanbanCard): Promise<void> {
-		try {
-			await this.dataManager.archiveCard(card.file);
-			// Refresh to remove the card from view
-			// Note: File watcher might trigger refresh too, but this ensures immediate feedback if watcher is slow
-			// or if we want to be sure.
-			// Actually, let's rely on watcher or manual refresh if needed, but for archive it's better to refresh immediately
-			// to show it's gone.
-			// But wait, if we rely on watcher, we might get double refresh.
-			// Let's just wait for watcher.
-		} catch (error) {
-			console.error('Failed to archive card:', error);
-		}
+		await errorHandler.wrap(
+			async () => {
+				await this.dataManager.archiveCard(card.file);
+				// File watcher will trigger refresh automatically
+			},
+			{ context: 'card-archive', action: 'archiveCard' }
+		)();
 	}
 
 	private openFile(filePath: string): void {

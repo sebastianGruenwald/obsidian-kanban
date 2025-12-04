@@ -1,6 +1,14 @@
 // View type constant
 export const VIEW_TYPE_KANBAN = 'kanban-board-view';
 
+// Frontmatter property keys
+export const FRONTMATTER_KEYS = {
+	ARCHIVED: 'archived',
+	CARD_COLOR: 'cardColor',
+	TAGS: 'tags',
+	STATUS: 'status',
+} as const;
+
 // CSS Classes
 export const CSS_CLASSES = {
 	// Board

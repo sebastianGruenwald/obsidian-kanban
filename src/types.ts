@@ -72,6 +72,16 @@ export const DEFAULT_SETTINGS: KanbanSettings = {
 	defaultVisibleProperties: ['title', 'created', 'modified']
 };
 
+export interface CardFrontmatter {
+	status?: string;
+	tags?: string | string[];
+	cardColor?: string;
+	archived?: boolean;
+	created?: string | number;
+	modified?: string | number;
+	[key: string]: unknown; // For custom properties
+}
+
 export interface KanbanCard {
 	file: string;
 	title: string;
@@ -79,5 +89,11 @@ export interface KanbanCard {
 	created: number;
 	modified: number;
 	content: string;
-	frontmatter: Record<string, any>;
+	frontmatter: CardFrontmatter;
+}
+
+export interface ValidationResult {
+	valid: boolean;
+	errors?: string[];
+	error?: string;
 }

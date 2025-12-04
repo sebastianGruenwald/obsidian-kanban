@@ -11,8 +11,7 @@ export default defineConfig({
 			exclude: [
 				'node_modules/**',
 				'**/*.config.*',
-				'**/dist/**',
-				'**/deployment/**'
+				'**/dist/**'
 			]
 		}
 	},

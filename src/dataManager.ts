@@ -1,8 +1,9 @@
 import { App, TFile } from 'obsidian';
 import { KanbanCard, BoardConfig, KanbanSettings } from './types';
-import { getAllTags, sanitizeFileName, showError } from './utils';
-import { DEFAULTS } from './constants';
+import { getAllTags, sanitizeFileName } from './utils';
+import { DEFAULTS, FRONTMATTER_KEYS } from './constants';
 import { getRandomCardColor } from './modals';
+import { errorHandler } from './errorHandler';
 
 export class DataManager {
 	constructor(
@@ -27,8 +28,10 @@ export class DataManager {
 
 			return this.sortCards(cards);
 		} catch (error) {
-			console.error('Error getting kanban cards:', error);
-			showError('Failed to load kanban cards');
+			errorHandler.handle(error, {
+				context: 'data-fetch',
+				action: 'Loading kanban cards',
+			});
 			return [];
 		}
 	}
@@ -43,7 +46,7 @@ export class DataManager {
 		}
 
 		// Check if archived
-		if (cache?.frontmatter?.archived === true) {
+		if (cache?.frontmatter?.[FRONTMATTER_KEYS.ARCHIVED] === true) {
 			return false;
 		}
 
@@ -134,10 +137,10 @@ export class DataManager {
 				frontmatter[this.boardConfig.columnProperty] = newColumn;
 			});
 		} catch (error) {
-			console.error('Error updating card column:', error);
-			const message = error instanceof Error ? error.message : 'Unknown error';
-			showError(`Failed to move card: ${message}`);
-			throw error;
+			errorHandler.handleAndThrow(error, {
+				context: 'card-move',
+				action: `Moving card to ${newColumn}`,
+			});
 		}
 	}
 
@@ -149,13 +152,13 @@ export class DataManager {
 			}
 
 			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				frontmatter['archived'] = true;
+				frontmatter[FRONTMATTER_KEYS.ARCHIVED] = true;
 			});
 		} catch (error) {
-			console.error('Error archiving card:', error);
-			const message = error instanceof Error ? error.message : 'Unknown error';
-			showError(`Failed to archive card: ${message}`);
-			throw error;
+			errorHandler.handleAndThrow(error, {
+				context: 'card-archive',
+				action: 'Archiving card',
+			});
 		}
 	}
 
@@ -203,33 +206,33 @@ export class DataManager {
 			// Then use processFrontMatter to set metadata safely
 			await this.app.fileManager.processFrontMatter(newFile, (frontmatter) => {
 				frontmatter[this.boardConfig.columnProperty] = columnName;
-				frontmatter['cardColor'] = finalCardColor;
+				frontmatter[FRONTMATTER_KEYS.CARD_COLOR] = finalCardColor;
 
 				// Ensure tag exists in frontmatter tags if not in content
 				// Note: This is a simple way to add the tag. 
 				// Ideally we check if it's in the content, but for now adding to frontmatter is safe.
 				if (!content.includes(this.boardConfig.tagFilter)) {
 					const tag = this.boardConfig.tagFilter.replace('#', '');
-					if (!frontmatter.tags) {
-						frontmatter.tags = [tag];
-					} else if (Array.isArray(frontmatter.tags)) {
-						if (!frontmatter.tags.includes(tag)) {
-							frontmatter.tags.push(tag);
+					if (!frontmatter[FRONTMATTER_KEYS.TAGS]) {
+						frontmatter[FRONTMATTER_KEYS.TAGS] = [tag];
+					} else if (Array.isArray(frontmatter[FRONTMATTER_KEYS.TAGS])) {
+						if (!frontmatter[FRONTMATTER_KEYS.TAGS].includes(tag)) {
+							frontmatter[FRONTMATTER_KEYS.TAGS].push(tag);
 						}
 					} else {
 						// String tag
-						if (frontmatter.tags !== tag) {
-							frontmatter.tags = [frontmatter.tags, tag];
+						if (frontmatter[FRONTMATTER_KEYS.TAGS] !== tag) {
+							frontmatter[FRONTMATTER_KEYS.TAGS] = [frontmatter[FRONTMATTER_KEYS.TAGS], tag];
 						}
 					}
 				}
 			});
 
 		} catch (error) {
-			console.error('Error creating new card:', error);
-			const message = error instanceof Error ? error.message : 'Unknown error';
-			showError(`Failed to create card: ${message}`);
-			throw error;
+			errorHandler.handleAndThrow(error, {
+				context: 'card-creation',
+				action: `Creating card "${title}"`,
+			});
 		}
 	}
 
@@ -249,10 +252,10 @@ export class DataManager {
 			const newPath = file.path.replace(file.name, `${sanitizedTitle}.md`);
 			await this.app.fileManager.renameFile(file, newPath);
 		} catch (error) {
-			console.error('Error updating card title:', error);
-			const message = error instanceof Error ? error.message : 'Unknown error';
-			showError(`Failed to rename card: ${message}`);
-			throw error;
+			errorHandler.handleAndThrow(error, {
+				context: 'card-update',
+				action: `Renaming card to "${newTitle}"`,
+			});
 		}
 	}
 
@@ -268,18 +271,18 @@ export class DataManager {
 				const cleanTags = tags.map(tag => tag.replace(/^#/, ''));
 				
 				if (cleanTags.length === 0) {
-					delete frontmatter.tags;
+					delete frontmatter[FRONTMATTER_KEYS.TAGS];
 				} else if (cleanTags.length === 1) {
-					frontmatter.tags = cleanTags[0];
+					frontmatter[FRONTMATTER_KEYS.TAGS] = cleanTags[0];
 				} else {
-					frontmatter.tags = cleanTags;
+					frontmatter[FRONTMATTER_KEYS.TAGS] = cleanTags;
 				}
 			});
 		} catch (error) {
-			console.error('Error updating card tags:', error);
-			const message = error instanceof Error ? error.message : 'Unknown error';
-			showError(`Failed to update tags: ${message}`);
-			throw error;
+			errorHandler.handleAndThrow(error, {
+				context: 'card-update',
+				action: 'Updating card tags',
+			});
 		}
 	}
 

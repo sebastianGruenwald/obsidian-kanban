@@ -47,14 +47,6 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 /**
- * Validate tag format (should start with #)
- */
-export function validateTag(tag: string): boolean {
-	if (!tag || tag.trim().length === 0) return false;
-	return tag.startsWith('#');
-}
-
-/**
  * Ensure tag has # prefix
  */
 export function normalizeTag(tag: string): string {
@@ -71,20 +63,6 @@ export function validateBoardName(name: string): { valid: boolean; error?: strin
 	}
 	if (name.length > 100) {
 		return { valid: false, error: 'Board name too long (max 100 characters)' };
-	}
-	return { valid: true };
-}
-
-/**
- * Validate column property name
- */
-export function validatePropertyName(name: string): { valid: boolean; error?: string } {
-	if (!name || name.trim().length === 0) {
-		return { valid: false, error: 'Property name cannot be empty' };
-	}
-	// Check for valid YAML property name (allow letters, numbers, underscores, hyphens)
-	if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(name)) {
-		return { valid: false, error: 'Invalid property name format' };
 	}
 	return { valid: true };
 }
@@ -121,13 +99,6 @@ export function showInfo(message: string): void {
 }
 
 /**
- * Check if a file path matches kanban criteria
- */
-export function shouldIncludeFile(tags: string[], boardTagFilter: string): boolean {
-	return tags.includes(boardTagFilter);
-}
-
-/**
  * Generate unique ID for boards
  */
 export function generateId(base: string, existingIds: string[]): string {
@@ -141,52 +112,4 @@ export function generateId(base: string, existingIds: string[]): string {
 	}
 
 	return id;
-}
-
-/**
- * Safe JSON parse with fallback
- */
-export function safeJsonParse<T>(json: string, fallback: T): T {
-	try {
-		return JSON.parse(json);
-	} catch (e) {
-		console.error('Failed to parse JSON:', e);
-		return fallback;
-	}
-}
-
-/**
- * Format date for display
- */
-export function formatDate(timestamp: number, format: 'short' | 'long' = 'short'): string {
-	const date = new Date(timestamp);
-	if (format === 'short') {
-		return date.toLocaleDateString();
-	}
-	return date.toLocaleString();
-}
-
-/**
- * Throttle function execution
- */
-export function throttle<T extends (...args: any[]) => any>(
-	func: T,
-	limit: number
-): (...args: Parameters<T>) => void {
-	let inThrottle: boolean;
-	
-	return function executedFunction(...args: Parameters<T>) {
-		if (!inThrottle) {
-			func(...args);
-			inThrottle = true;
-			setTimeout(() => inThrottle = false, limit);
-		}
-	};
-}
-
-/**
- * Deep clone an object
- */
-export function deepClone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
 }

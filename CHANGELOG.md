@@ -2,6 +2,78 @@
 
 All notable changes to the Kanban Board plugin will be documented in this file.
 
+## [3.0.0] - 2025-12-04
+
+### 🚀 Major Refactoring & Improvements
+
+#### Architecture Enhancements
+- **Centralized Error Handling**: New `ErrorHandler` service for consistent error management across the plugin
+- **Settings Migration System**: Automatic migration of settings with version tracking and validation
+- **Service Layer Architecture**: Separated concerns with dedicated services for search/filter, state management, and caching
+- **Improved Type Safety**: Removed `any` types, added strict interfaces for `CardFrontmatter` and other data structures
+- **Memory Leak Fixes**: Improved view lifecycle management with proper cleanup
+
+#### New Services
+- **SearchFilterService**: Advanced filtering with search queries, tag selection, and date ranges
+- **ViewStateManager**: Reactive state management with subscription-based updates
+- **DataCacheService**: Intelligent caching system with TTL and automatic invalidation
+- **SettingsMigrator**: Automatic settings upgrades with validation
+
+#### Developer Experience
+- **Comprehensive Tests**: Added test suites for DataManager, SearchFilterService, and other core components
+- **Enhanced Build Scripts**: Added format, format:check, precommit, and validate scripts
+- **ESLint Configuration**: Improved linting rules with stricter type checking
+- **Prettier Integration**: Code formatting with .prettierrc.json configuration
+- **CI/CD Pipeline**: GitHub Actions workflows for testing and building
+- **API Documentation**: Complete API reference in docs/API.md
+- **Contributing Guide**: Detailed CONTRIBUTING.md with development guidelines
+
+#### Accessibility Improvements
+- **ARIA Labels**: Added proper ARIA attributes to cards, columns, and buttons
+- **Keyboard Navigation**: Support for Enter, Space, F2, and Delete keys on cards
+- **Screen Reader Support**: Enhanced announcements for WIP limits and card actions
+- **Focus Management**: Improved tab navigation through kanban boards
+
+#### Code Quality
+- **Constants Consolidation**: Moved magic strings to `FRONTMATTER_KEYS` constant
+- **Error Messages**: Consistent, user-friendly error messages across the plugin
+- **JSDoc Comments**: Added comprehensive documentation for public APIs
+- **Type Definitions**: Proper interfaces for all data structures
+
+#### Performance Optimizations
+- **Data Caching**: Reduced redundant file reads with intelligent cache
+- **Batch Rendering**: Improved rendering performance for large boards
+- **Debounced Operations**: Optimized refresh and search operations
+
+### 🔧 Technical Debt Reduction
+- **TypeScript Configuration**: Updated to ES2018 for `includes()` and `matchAll()` support
+- **View Cleanup**: Fixed memory leaks in view management
+- **Settings Validation**: Added validation before saving settings
+- **Error Propagation**: Consistent error handling throughout the codebase
+
+### 📚 Documentation
+- **API Documentation**: Complete developer reference
+- **Contributing Guidelines**: Detailed contribution workflow
+- **Code Examples**: Practical examples for common use cases
+- **Architecture Overview**: Service layer and component documentation
+
+### 🧪 Testing
+- **Unit Tests**: Comprehensive test coverage for core services
+- **Test Infrastructure**: Vitest configuration with coverage reporting
+- **Mock System**: Improved mocking for Obsidian API
+
+### ⚠️ Breaking Changes
+- Settings structure has changed (automatic migration included)
+- Some internal APIs have been refactored (affects custom extensions)
+- Error handling now uses ErrorHandler service (old console.error calls deprecated)
+
+### 📦 Dependencies
+- Added `prettier` for code formatting
+- Updated TypeScript target to ES2018
+- Enhanced ESLint configuration
+
+---
+
 ## [2.0.0] - 2024-10-16
 
 ### ✨ Major New Features

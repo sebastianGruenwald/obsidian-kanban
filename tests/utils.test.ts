@@ -1,28 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-	validateTag,
 	normalizeTag,
 	validateBoardName,
-	validatePropertyName,
 	sanitizeFileName,
 	generateId
 } from '../src/utils';
 
 describe('Utils', () => {
-	describe('validateTag', () => {
-		it('should return true for valid tags', () => {
-			expect(validateTag('#kanban')).toBe(true);
-			expect(validateTag('#my-tag')).toBe(true);
-			expect(validateTag('#tag123')).toBe(true);
-		});
-
-		it('should return false for invalid tags', () => {
-			expect(validateTag('kanban')).toBe(false);
-			expect(validateTag('')).toBe(false);
-			expect(validateTag('   ')).toBe(false);
-		});
-	});
-
 	describe('normalizeTag', () => {
 		it('should add # prefix if missing', () => {
 			expect(normalizeTag('kanban')).toBe('#kanban');
@@ -57,23 +41,6 @@ describe('Utils', () => {
 			const result = validateBoardName(longName);
 			expect(result.valid).toBe(false);
 			expect(result.error).toContain('too long');
-		});
-	});
-
-	describe('validatePropertyName', () => {
-		it('should accept valid property names', () => {
-			expect(validatePropertyName('status').valid).toBe(true);
-			expect(validatePropertyName('my_property').valid).toBe(true);
-			expect(validatePropertyName('_privateField').valid).toBe(true);
-			expect(validatePropertyName('property123').valid).toBe(true);
-			expect(validatePropertyName('valid-name').valid).toBe(true);
-		});
-
-		it('should reject invalid property names', () => {
-			expect(validatePropertyName('').valid).toBe(false);
-			expect(validatePropertyName('123invalid').valid).toBe(false);
-			expect(validatePropertyName('invalid name').valid).toBe(false);
-			expect(validatePropertyName('invalid.name').valid).toBe(false);
 		});
 	});
 

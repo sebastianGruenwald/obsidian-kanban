@@ -9,14 +9,19 @@
         "To Do",
         "Done"
       ],
-      "customColumns": [],
+      "customColumns": [
+        "In Progress"
+      ],
       "columnWidths": {},
-      "columnOrder": [],
+      "columnOrder": [
+        "To Do",
+        "In Progress",
+        "Done"
+      ],
       "visibleProperties": [
         "title",
         "created",
         "dummy",
-        "prio",
         "cover",
         "tags",
         "image"

@@ -115,6 +115,10 @@ export class KanbanColumnComponent {
 	private renderHeader(column: HTMLElement): void {
 		const header = column.createDiv({ cls: 'kanban-column-header' });
 
+		// Accessibility: Add ARIA attributes
+		header.setAttribute('role', 'heading');
+		header.setAttribute('aria-level', '2');
+
 		// SortableJS handles the dragging now, but we need the class for the handle
 		header.setAttribute('data-column-name', this.columnName);
 
@@ -126,7 +130,10 @@ export class KanbanColumnComponent {
 		// Add card button
 		const addBtn = headerControls.createEl('button', {
 			cls: 'kanban-add-card-btn',
-			attr: { title: 'Add new card' }
+			attr: { 
+				title: 'Add new card',
+				'aria-label': `Add new card to ${this.columnName}`,
+			}
 		});
 		setIcon(addBtn, 'plus');
 
@@ -137,7 +144,10 @@ export class KanbanColumnComponent {
 		// Column options button
 		const optionsBtn = headerControls.createEl('button', {
 			cls: 'kanban-column-options-btn',
-			attr: { title: 'Column options' }
+			attr: { 
+				title: 'Column options',
+				'aria-label': `Options for ${this.columnName} column`,
+			}
 		});
 		setIcon(optionsBtn, 'more-horizontal');
 
@@ -151,12 +161,18 @@ export class KanbanColumnComponent {
 
 			const countSpan = header.createSpan({
 				cls: 'kanban-column-count',
-				text: countText
+				text: countText,
+				attr: {
+					'aria-label': `${this.cards.length} cards${limit ? ` (limit: ${limit})` : ''}`,
+				},
 			});
 
 			if (limit && this.cards.length > limit) {
 				countSpan.addClass('wip-limit-exceeded');
 				header.addClass('wip-limit-exceeded');
+				// Add ARIA alert for screen readers
+				countSpan.setAttribute('role', 'alert');
+				countSpan.setAttribute('aria-live', 'polite');
 			}
 		}
 	}

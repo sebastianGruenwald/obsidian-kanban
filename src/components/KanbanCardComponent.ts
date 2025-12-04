@@ -27,6 +27,11 @@ export class KanbanCardComponent {
 	private render(): HTMLElement {
 		const cardEl = this.container.createDiv({ cls: 'kanban-card' });
 
+		// Accessibility: Add ARIA role and label
+		cardEl.setAttribute('role', 'article');
+		cardEl.setAttribute('aria-label', `Card: ${this.card.title}`);
+		cardEl.setAttribute('tabindex', '0');
+
 		// Apply density class
 		if (this.boardConfig.cardDensity) {
 			cardEl.addClass(`density-${this.boardConfig.cardDensity}`);
@@ -80,6 +85,20 @@ export class KanbanCardComponent {
 		cardEl.addEventListener('contextmenu', (e) => {
 			e.preventDefault();
 			this.showCardContextMenu(e);
+		});
+
+		// Keyboard navigation
+		cardEl.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				this.openFile(this.card.file);
+			} else if (e.key === 'F2') {
+				e.preventDefault();
+				this.startTitleEdit(cardEl);
+			} else if (e.key === 'Delete') {
+				e.preventDefault();
+				this.showCardContextMenu(e as any);
+			}
 		});
 
 		// Mobile Options Button

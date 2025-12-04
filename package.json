@@ -5,16 +5,22 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit && node esbuild.config.mjs production && npm run copy-files",
-		"copy-files": "cp main.js deployment/ && cp styles.css deployment/ && cp manifest.json deployment/",
+		"build": "tsc -noEmit && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"release": "./release.sh",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:ui": "vitest --ui",
 		"lint": "eslint src --ext .ts",
 		"lint:fix": "eslint src --ext .ts --fix",
 		"clean": "rm -f main.js main.js.map",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"typecheck:watch": "tsc --noEmit --watch",
+		"format": "prettier --write \"src/**/*.ts\"",
+		"format:check": "prettier --check \"src/**/*.ts\"",
+		"precommit": "npm run lint && npm run typecheck && npm run test",
+		"validate": "npm run lint && npm run typecheck && npm run test:coverage"
 	},
 	"keywords": [
 		"obsidian",
@@ -34,6 +40,7 @@
 		"esbuild": "^0.19.11",
 		"eslint": "^8.56.0",
 		"obsidian": "latest",
+		"prettier": "^3.1.1",
 		"tslib": "^2.6.2",
 		"typescript": "^5.3.3",
 		"vitest": "^1.1.0"

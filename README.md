@@ -2,6 +2,12 @@
 
 ![Obsidian Kanban Board](docs/screenshot_assets/kanban_board.png)
 
+[![CI](https://github.com/sebastianGruenwald/obsidian-kanban/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianGruenwald/obsidian-kanban/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+
+A powerful, flexible kanban board plugin for Obsidian that transforms your tagged notes into visual task management boards.
+
 ## 🎯 Features
 
 ### Multiple Boards
@@ -44,9 +50,22 @@
 
 ## 📚 Documentation
 
-- **[Installation Guide](docs/INSTALL.md)**: Detailed instructions for BRAT, Manual, and Source installation.
-- **[Examples](docs/EXAMPLES.md)**: Detailed usage examples and board configurations.
-- **[Development Guide](docs/DEVELOPMENT.md)**: Instructions for building and releasing the plugin.
+- **[Installation Guide](INSTALL.md)**: Detailed instructions for BRAT, Manual, and Source installation
+- **[Examples](docs/EXAMPLES.md)**: Detailed usage examples and board configurations
+- **[Development Guide](docs/DEVELOPMENT.md)**: Instructions for building and releasing the plugin
+- **[API Documentation](docs/API.md)**: Complete API reference for extending the plugin
+- **[Contributing Guide](CONTRIBUTING.md)**: Guidelines for contributing to the project
+
+## 🏗️ Architecture
+
+This plugin is built with:
+- **TypeScript** with strict type checking
+- **Centralized error handling** for robust operation
+- **Service layer architecture** for maintainability
+- **Comprehensive test coverage** with Vitest
+- **Accessibility** features (ARIA labels, keyboard navigation)
+- **State management** for reactive UI updates
+- **Data caching** for improved performance
 
 ## 🔄 Changelog
 

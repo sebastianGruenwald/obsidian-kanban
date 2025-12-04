@@ -3,8 +3,10 @@ import { KanbanSettings, DEFAULT_SETTINGS } from './types';
 import { KanbanSettingTab } from './settings';
 import { KanbanView, VIEW_TYPE_KANBAN } from './kanbanView';
 import { BoardManager } from './boardManager';
-import { debounce, getAllTags, showError, showInfo } from './utils';
+import { debounce, getAllTags, showInfo } from './utils';
 import { DEFAULTS, KEYBOARD_SHORTCUTS, ICONS } from './constants';
+import { errorHandler } from './errorHandler';
+import { settingsMigrator } from './settingsMigrator';
 
 // Extend the App interface to include the trigger method for style-settings
 declare module 'obsidian' {
@@ -16,8 +18,9 @@ declare module 'obsidian' {
 export default class KanbanPlugin extends Plugin {
 	settings!: KanbanSettings;
 	boardManager!: BoardManager;
-	private views: Set<KanbanView> = new Set();
+	private views: Map<string, KanbanView> = new Map();
 	private debouncedRefreshInternal!: () => void;
+	private layoutChangeHandler?: () => void;
 
 	async onload() {
 		await this.loadSettings();
@@ -34,31 +37,34 @@ export default class KanbanPlugin extends Plugin {
 			VIEW_TYPE_KANBAN,
 			(leaf) => {
 				const view = new KanbanView(leaf, this);
-				this.views.add(view);
-				
-				// Clean up when view is closed
-				this.registerEvent(
-					this.app.workspace.on('layout-change', () => {
-						// Remove views that are no longer in the workspace
-						const activeViews = new Set<KanbanView>();
-						this.app.workspace.getLeavesOfType(VIEW_TYPE_KANBAN).forEach(leaf => {
-							const view = leaf.view;
-							if (view instanceof KanbanView) {
-								activeViews.add(view);
-							}
-						});
-						
-						// Remove views that are no longer active
-						this.views.forEach(view => {
-							if (!activeViews.has(view)) {
-								this.views.delete(view);
-							}
-						});
-					})
-				);
-				
+				// Use view instance as key in Map
+				const viewId = `view-${Date.now()}-${Math.random()}`;
+				this.views.set(viewId, view);
 				return view;
 			}
+		);
+
+		// Set up view cleanup on layout changes
+		this.layoutChangeHandler = () => {
+			const activeLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_KANBAN);
+			const activeViews = new Set<KanbanView>();
+			
+			activeLeaves.forEach(leaf => {
+				if (leaf.view instanceof KanbanView) {
+					activeViews.add(leaf.view);
+				}
+			});
+			
+			// Remove views that are no longer in the workspace
+			for (const [viewId, view] of this.views.entries()) {
+				if (!activeViews.has(view)) {
+					this.views.delete(viewId);
+				}
+			}
+		};
+
+		this.registerEvent(
+			this.app.workspace.on('layout-change', this.layoutChangeHandler)
 		);
 
 		// Add ribbon icon
@@ -160,6 +166,11 @@ export default class KanbanPlugin extends Plugin {
 		// Clear all views
 		this.views.clear();
 		
+		// Remove layout change handler
+		if (this.layoutChangeHandler) {
+			this.layoutChangeHandler = undefined;
+		}
+		
 		// Remove styles
 		const styleEl = document.getElementById('kanban-board-styles');
 		if (styleEl) {
@@ -189,27 +200,14 @@ export default class KanbanPlugin extends Plugin {
 	async loadSettings() {
 		try {
 			const loadedData = await this.loadData();
-			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 			
-			// Ensure we have at least one board
-			if (!this.settings.boards || this.settings.boards.length === 0) {
-				this.settings.boards = [DEFAULT_SETTINGS.boards[0]];
-			}
-			
-		// Migrate existing boards to add new properties
-		this.settings.boards = this.settings.boards.map(board => ({
-			...board,
-			imageDisplayMode: board.imageDisplayMode || 'cover',
-			imageProperties: board.imageProperties || ['cover', 'image', 'thumbnail', 'banner'],
-			theme: board.theme || 'default'
-		}));			// Ensure active board exists
-			if (!this.settings.activeBoard || !this.settings.boards.find(b => b.id === this.settings.activeBoard)) {
-				this.settings.activeBoard = this.settings.boards[0].id;
-			}
-		} catch (error) {
-			console.error('Failed to load settings:', error);
+			// Use migrator to handle settings upgrades
+			this.settings = settingsMigrator.migrate(loadedData || {});		} catch (error) {
+			errorHandler.handle(error, {
+				context: 'settings-load',
+				action: 'Loading plugin settings',
+			});
 			this.settings = DEFAULT_SETTINGS;
-			showError('Failed to load settings, using defaults');
 		}
 	}
 
@@ -217,10 +215,20 @@ export default class KanbanPlugin extends Plugin {
 		try {
 			// Update the board manager's boards with current settings
 			this.settings.boards = this.boardManager.getAllBoards();
+			
+			// Validate before saving
+			const validation = settingsMigrator.validateSettings(this.settings);
+			if (!validation.valid) {
+				console.warn('Settings validation warnings:', validation.errors);
+			}
+			
 			await this.saveData(this.settings);
 		} catch (error) {
-			console.error('Failed to save settings:', error);
-			showError('Failed to save settings');
+			errorHandler.handle(error, {
+				context: 'settings-save',
+				action: 'Saving plugin settings',
+			});
+			throw error;
 		}
 	}
 
@@ -249,7 +257,15 @@ export default class KanbanPlugin extends Plugin {
 
 	refreshAllViews() {
 		for (const view of this.views.values()) {
-			view.refresh();
+			try {
+				view.refresh();
+			} catch (error) {
+				errorHandler.handle(error, {
+					context: 'render',
+					action: 'Refreshing view',
+					showToUser: false,
+				});
+			}
 		}
 	}
 
@@ -282,12 +298,12 @@ export default class KanbanPlugin extends Plugin {
 				await this.saveSettings();
 			}
 		} catch (error) {
-			console.error('Failed to update column order:', error);
-			showError('Failed to update column order');
+			errorHandler.handle(error, {
+				context: 'board-update',
+				action: 'Updating column order',
+			});
 		}
-	}
-
-	// Helper method to get files with the current board's tag
+	}	// Helper method to get files with the current board's tag
 	async getKanbanFiles() {
 		try {
 			const currentBoard = this.boardManager.getBoard(this.settings.activeBoard);
