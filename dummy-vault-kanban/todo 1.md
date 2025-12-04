@@ -7,5 +7,6 @@ tags:
   - dummy
 prio: 1
 dummy:
+dueDate: 2025-12-03
 ---
 # todo 1

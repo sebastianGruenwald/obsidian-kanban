@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "todo 1.md",
+                "file": "test 2.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "todo 1"
+              "title": "test 2"
             }
           }
         ]
@@ -174,19 +174,9 @@
               "icon": "layout-dashboard",
               "title": "Kanban: Default Kanban"
             }
-          },
-          {
-            "id": "f48dfb7d45551564",
-            "type": "leaf",
-            "state": {
-              "type": "peerdraft-share-view",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "Your Peerdraft Shares"
-            }
           }
         ],
-        "currentTab": 6
+        "currentTab": 5
       }
     ],
     "direction": "horizontal",
@@ -201,15 +191,14 @@
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
       "bases:Create new base": false,
-      "obsidian-kanban:Open Kanban Board": false,
-      "peerdraft:Show my Peerdraft Shares": false
+      "obsidian-kanban:Open Kanban Board": false
     }
   },
-  "active": "f48dfb7d45551564",
+  "active": "ebb7f83a7bfa933a",
   "lastOpenFiles": [
+    "todo 1.md",
     "test 2.md",
     "test.md",
-    "todo 1.md",
     "Pasted image 20251204083636.png",
     "Pasted image 20251204083430.png",
     "Welcome.md"

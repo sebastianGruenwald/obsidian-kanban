@@ -6,6 +6,7 @@ import { AddColumnModal } from './modals';
 import { VIEW_TYPE_KANBAN } from './constants';
 import { KanbanHeader } from './components/KanbanHeader';
 import { KanbanBoardRenderer } from './components/KanbanBoardRenderer';
+import { DragDropManager } from './utils/DragDropManager';
 
 export { VIEW_TYPE_KANBAN };
 
@@ -23,9 +24,11 @@ export class KanbanView extends ItemView {
 	private boardContainer: HTMLElement | null = null;
 	private headerComponent: KanbanHeader | null = null;
 	private boardRenderer: KanbanBoardRenderer | null = null;
+	private dragDropManager: DragDropManager;
 
 	constructor(leaf: WorkspaceLeaf, private plugin: KanbanPlugin) {
 		super(leaf);
+		this.dragDropManager = new DragDropManager();
 		this.updateCurrentBoard();
 	}
 
@@ -107,7 +110,8 @@ export class KanbanView extends ItemView {
 					this.renderBoard();
 				},
 				() => this.selectedTags,
-				() => this.getAllTags()
+				() => this.getAllTags(),
+				() => this.getAllProperties()
 			);
 		}
 
@@ -123,12 +127,13 @@ export class KanbanView extends ItemView {
 				this.app,
 				this.plugin,
 				this.dataManager,
+				this.dragDropManager,
 				this.boardContainer,
 				() => this.refresh(),
-				(filePath, newColumn) => this.moveCard(filePath, newColumn),
-				(card) => this.archiveCard(card),
-				(filePath, newColumn, swimlaneProp, swimlaneValue) => this.moveCardToSwimlane(filePath, newColumn, swimlaneProp, swimlaneValue),
-				async (newOrder) => {
+				(filePath: string, newColumn: string) => this.moveCard(filePath, newColumn),
+				(card: KanbanCard) => this.archiveCard(card),
+				(filePath: string, newColumn: string, swimlaneProp: string, swimlaneValue: string) => this.moveCardToSwimlane(filePath, newColumn, swimlaneProp, swimlaneValue),
+				async (newOrder: string[]) => {
 					if (this.currentBoard) {
 						this.plugin.boardManager.updateColumnOrder(this.currentBoard.id, newOrder);
 						await this.plugin.saveSettings();
@@ -184,6 +189,21 @@ export class KanbanView extends ItemView {
 			}
 		});
 		return Array.from(tags).sort();
+	}
+
+	private getAllProperties(): string[] {
+		const properties = new Set<string>();
+		this.cards.forEach(card => {
+			if (card.frontmatter) {
+				Object.keys(card.frontmatter).forEach(key => {
+					// Exclude internal properties
+					if (!['position', 'tags', 'archived'].includes(key)) {
+						properties.add(key);
+					}
+				});
+			}
+		});
+		return Array.from(properties).sort();
 	}
 
 	private async reorderColumns(draggedColumn: string, targetColumn: string): Promise<void> {

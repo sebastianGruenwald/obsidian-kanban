@@ -19,7 +19,8 @@ export class KanbanHeader {
         private onSearch: (query: string) => void,
         private onTagFilter: (tags: Set<string>) => void,
         private getSelectedTags: () => Set<string>,
-        private getAllTags: () => string[]
+        private getAllTags: () => string[],
+        private getAllProperties: () => string[]
     ) { }
 
     render(searchQuery: string): void {
@@ -385,15 +386,16 @@ export class KanbanHeader {
         const standardProps = ['title', 'created', 'modified', 'tags'];
         const currentProps = this.currentBoard.visibleProperties;
 
-        // This is a limitation of extracting this component without passing all cards.
-        // Ideally we should pass a list of available properties.
-        // For now, let's just show standard + currently visible.
+        // Get all properties from cards dynamically
+        const cardProperties = this.getAllProperties();
+
+        // Build complete list of available properties
         const availableProperties = [
             { key: 'title', label: 'Title' },
             { key: 'created', label: 'Created Date' },
             { key: 'modified', label: 'Modified Date' },
             { key: 'tags', label: 'Tags' },
-            ...currentProps
+            ...cardProperties
                 .filter(p => !standardProps.includes(p))
                 .map(p => ({ key: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))
         ];

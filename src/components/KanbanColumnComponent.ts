@@ -4,7 +4,7 @@ import { KanbanCardComponent } from './KanbanCardComponent';
 import { RenameColumnModal, getRandomCardColor } from '../modals';
 import KanbanPlugin from '../main';
 import { DataManager } from '../dataManager';
-import Sortable from 'sortablejs';
+import { DragDropManager } from '../utils/DragDropManager';
 
 export class KanbanColumnComponent {
 	private element: HTMLElement;
@@ -15,6 +15,7 @@ export class KanbanColumnComponent {
 		private app: App,
 		private plugin: KanbanPlugin,
 		private dataManager: DataManager,
+		private dragDropManager: DragDropManager,
 		private boardConfig: BoardConfig,
 		private container: HTMLElement,
 		private columnName: string,
@@ -50,66 +51,80 @@ export class KanbanColumnComponent {
 		this.contentEl.setAttribute('data-column-name', this.columnName);
 
 		// Initialize Sortable for Cards
-		new Sortable(this.contentEl, {
-			group: 'kanban-cards',
-			animation: 150,
-			ghostClass: 'kanban-card-placeholder',
-			delay: 200, // Delay for touch devices to prevent accidental drags
-			delayOnTouchOnly: true,
-			onAdd: (evt) => {
-				const itemEl = evt.item;
-				const filePath = itemEl.getAttribute('data-file-path');
-				if (filePath) {
-					this.callbacks.onCardMove(filePath, this.columnName);
-				}
-			}
-		});
+		// Initialize Sortable for Cards
+		this.dragDropManager.initCardSorting(
+			this.contentEl,
+			this.columnName,
+			this.callbacks.onCardMove
+		);
 
 		// Add cards
-		// Add cards with batch rendering to avoid freezing UI
-		this.renderCardsBatched();
+		// Add cards with lazy rendering to improve performance
+		this.renderCardsLazy();
 
 		return column;
 	}
 
-	private renderCardsBatched(): void {
-		const BATCH_SIZE = 20;
-		let currentIndex = 0;
+	private renderCardsLazy(): void {
+		if (!this.contentEl) return;
 
-		const renderBatch = () => {
-			if (!this.contentEl) return;
+		const VISIBLE_THRESHOLD = 100; // Cards within 100px of viewport are rendered
 
-			const end = Math.min(currentIndex + BATCH_SIZE, this.cards.length);
+		// Create placeholder elements for all cards
+		const placeholders: HTMLElement[] = [];
+		for (let i = 0; i < this.cards.length; i++) {
+			const placeholder = this.contentEl.createDiv({
+				cls: 'kanban-card-placeholder-lazy',
+				attr: { 'data-card-index': String(i) }
+			});
+			placeholder.style.minHeight = '60px'; // Minimum height for placeholder
+			placeholders.push(placeholder);
+		}
 
-			for (let i = currentIndex; i < end; i++) {
-				const card = this.cards[i];
-				new KanbanCardComponent(
-					this.app,
-					card,
-					this.boardConfig,
-					this.contentEl,
-					this.allColumns,
-					this.callbacks.onCardMove,
-					// Pass empty functions for legacy drag handlers
-					() => { },
-					() => { },
-					this.callbacks.onCardArchive,
-					this.dataManager,
-					this.callbacks.onNewCard,
-					this.boardConfig.showCardColors ?? true
-				);
+		// Use IntersectionObserver to lazily render cards when they come into view
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach(entry => {
+					if (entry.isIntersecting) {
+						const placeholder = entry.target as HTMLElement;
+						const index = parseInt(placeholder.getAttribute('data-card-index') || '0', 10);
+						const card = this.cards[index];
+
+						// Stop observing this placeholder
+						observer.unobserve(placeholder);
+
+						// Replace placeholder with real card
+						new KanbanCardComponent(
+							this.app,
+							card,
+							this.boardConfig,
+							placeholder,
+							this.allColumns,
+							this.callbacks.onCardMove,
+							// Pass empty functions for legacy drag handlers
+							() => { },
+							() => { },
+							this.callbacks.onCardArchive,
+							this.dataManager,
+							this.callbacks.onNewCard,
+							this.boardConfig.showCardColors ?? true
+						);
+
+						// Remove placeholder class
+						placeholder.removeClass('kanban-card-placeholder-lazy');
+						placeholder.style.minHeight = '';
+					}
+				});
+			},
+			{
+				root: this.contentEl.closest('.kanban-column-content') || this.contentEl,
+				rootMargin: `${VISIBLE_THRESHOLD}px 0px`,
+				threshold: 0
 			}
+		);
 
-			currentIndex = end;
-
-			if (currentIndex < this.cards.length) {
-				// Schedule next batch
-				requestAnimationFrame(renderBatch);
-			}
-		};
-
-		// Start rendering
-		renderBatch();
+		// Observe all placeholders
+		placeholders.forEach(p => observer.observe(p));
 	}
 
 	private renderHeader(column: HTMLElement): void {

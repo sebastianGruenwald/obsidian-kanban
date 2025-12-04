@@ -1,15 +1,17 @@
+
 import { App, TFile } from 'obsidian';
 import { KanbanCard, BoardConfig } from '../types';
 import KanbanPlugin from '../main';
 import { DataManager } from '../dataManager';
 import { KanbanColumnComponent } from './KanbanColumnComponent';
-import Sortable from 'sortablejs';
+import { DragDropManager } from '../utils/DragDropManager';
 
 export class KanbanBoardRenderer {
     constructor(
         private app: App,
         private plugin: KanbanPlugin,
         private dataManager: DataManager,
+        private dragDropManager: DragDropManager,
         private container: HTMLElement,
         private onRefresh: () => void,
         private onMoveCard: (filePath: string, newColumn: string) => Promise<void>,
@@ -50,22 +52,11 @@ export class KanbanBoardRenderer {
 
         // Initialize Sortable for Columns
         if (!board.swimlaneProperty) {
-            new Sortable(this.container, {
-                animation: 150,
-                handle: '.kanban-column-header',
-                ghostClass: 'kanban-column-placeholder',
-                delay: 200,
-                delayOnTouchOnly: true,
-                onEnd: async (evt) => {
-                    if (evt.oldIndex === undefined || evt.newIndex === undefined || evt.oldIndex === evt.newIndex) return;
-
-                    const newOrder = [...columns];
-                    const movedColumn = newOrder.splice(evt.oldIndex, 1)[0];
-                    newOrder.splice(evt.newIndex, 0, movedColumn);
-
-                    await this.onUpdateColumns(newOrder);
-                }
-            });
+            this.dragDropManager.initColumnSorting(
+                this.container,
+                columns,
+                this.onUpdateColumns
+            );
         }
 
         // Filter cards
@@ -105,14 +96,15 @@ export class KanbanBoardRenderer {
                 this.app,
                 this.plugin,
                 this.dataManager,
+                this.dragDropManager,
                 board,
                 this.container,
                 columnName,
                 columnCards,
                 columns,
                 {
-                    onCardMove: (filePath, newColumn) => this.onMoveCard(filePath, newColumn),
-                    onCardArchive: (card) => this.onArchiveCard(card),
+                    onCardMove: (filePath: string, newColumn: string) => this.onMoveCard(filePath, newColumn),
+                    onCardArchive: (card: KanbanCard) => this.onArchiveCard(card),
                     onColumnRename: () => this.onRefresh(),
                     onColumnDelete: async () => {
                         this.plugin.boardManager.removeColumnFromBoard(board.id, columnName);
@@ -120,7 +112,7 @@ export class KanbanBoardRenderer {
                         this.onRefresh();
                     },
                     onColumnReorder: () => { },
-                    onColumnResize: async (width) => {
+                    onColumnResize: async (width: number) => {
                         const columnWidths = board.columnWidths || {};
                         columnWidths[columnName] = width;
                         this.plugin.boardManager.updateBoard(board.id, { columnWidths });
@@ -185,16 +177,17 @@ export class KanbanBoardRenderer {
                     this.app,
                     this.plugin,
                     this.dataManager,
+                    this.dragDropManager,
                     board,
                     cell,
                     columnName,
                     cellCards,
                     columns,
                     {
-                        onCardMove: async (filePath, newColumn) => {
+                        onCardMove: async (filePath: string, newColumn: string) => {
                             await this.onMoveCardToSwimlane(filePath, newColumn, swimlaneProp, swimlane);
                         },
-                        onCardArchive: (card) => this.onArchiveCard(card),
+                        onCardArchive: (card: KanbanCard) => this.onArchiveCard(card),
                         onColumnRename: () => this.onRefresh(),
                         onColumnDelete: async () => {
                             this.plugin.boardManager.removeColumnFromBoard(board.id, columnName);

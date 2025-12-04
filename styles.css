@@ -807,7 +807,8 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
   flex-grow: 1;
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap; /* Ensure columns never wrap */
+  flex-wrap: nowrap;
+  /* Ensure columns never wrap */
   overflow-x: auto;
   overflow-y: hidden;
   padding: var(--k-space-xl);
@@ -1969,7 +1970,9 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
 
 .kanban-subtask-count {
   font-weight: 500;
-}/* ==========================================================================
+}
+
+/* ==========================================================================
    Mobile Optimizations
    ========================================================================== */
 
@@ -1994,18 +1997,22 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
   justify-content: flex-start;
   gap: var(--k-space-sm);
   width: 100%;
-  padding-bottom: 4px; /* Space for scrollbar if visible */
+  padding-bottom: 4px;
+  /* Space for scrollbar if visible */
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Hide scrollbar Firefox */
+  scrollbar-width: none;
+  /* Hide scrollbar Firefox */
 }
 
 .is-mobile .kanban-board-controls::-webkit-scrollbar {
-  display: none; /* Hide scrollbar Chrome/Safari */
+  display: none;
+  /* Hide scrollbar Chrome/Safari */
 }
 
 .is-mobile .kanban-search-container {
   width: 100%;
-  order: -1; /* Search bar at top of controls */
+  order: -1;
+  /* Search bar at top of controls */
   margin-bottom: var(--k-space-xs);
 }
 
@@ -2028,7 +2035,7 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
   max-width: 100%;
   width: 100%;
   flex: 0 0 100%;
-  
+
   scroll-snap-align: center;
   scroll-snap-stop: always;
   height: 100%;
@@ -2044,9 +2051,10 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
 }
 
 .is-mobile .kanban-card {
-  padding: var(--k-space-md); /* Slightly larger padding */
+  padding: var(--k-space-md);
+  /* Slightly larger padding */
   /* Disable hover effects on mobile to prevent sticky hover states */
-  transform: none !important; 
+  transform: none !important;
 }
 
 .is-mobile .kanban-card:active {
@@ -2058,7 +2066,8 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
 }
 
 .is-mobile .kanban-column-controls {
-  opacity: 1; /* Always show controls on mobile */
+  opacity: 1;
+  /* Always show controls on mobile */
 }
 
 .is-mobile .kanban-column-controls button {
@@ -2079,12 +2088,14 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
   position: fixed;
   top: 50% !important;
   transform: translateY(-50%);
-  box-shadow: 0 0 0 100vh rgba(0,0,0,0.5); /* Dim background */
+  box-shadow: 0 0 0 100vh rgba(0, 0, 0, 0.5);
+  /* Dim background */
 }
 
 /* Mobile Card Options Button */
 .kanban-card-options-btn {
-  display: none; /* Hidden by default on desktop */
+  display: none;
+  /* Hidden by default on desktop */
   position: absolute;
   top: var(--k-space-xs);
   right: var(--k-space-xs);
@@ -2098,7 +2109,8 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
 }
 
 .is-mobile .kanban-card-options-btn {
-  display: flex; /* Show on mobile */
+  display: flex;
+  /* Show on mobile */
   align-items: center;
   justify-content: center;
   width: 32px;
@@ -2113,4 +2125,43 @@ body.theme-sticky-notes .kanban-board .kanban-card-title-input {
 /* Adjust card title to not overlap with options button on mobile */
 .is-mobile .kanban-card-title {
   padding-right: 24px;
+}
+
+/* ==========================================================================
+   Due Date Badges
+   ========================================================================== */
+
+.kanban-due-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--k-radius-sm);
+  background: var(--background-modifier-hover);
+  font-size: 0.75rem;
+}
+
+.kanban-due-date svg {
+  width: 12px;
+  height: 12px;
+}
+
+.kanban-due-date.is-overdue {
+  background: rgba(255, 77, 77, 0.2);
+  color: #ff4d4d;
+}
+
+.theme-dark .kanban-due-date.is-overdue {
+  background: rgba(255, 77, 77, 0.3);
+  color: #ff6b6b;
+}
+
+.kanban-due-date.is-due-soon {
+  background: rgba(255, 193, 7, 0.2);
+  color: #e5a700;
+}
+
+.theme-dark .kanban-due-date.is-due-soon {
+  background: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
 }

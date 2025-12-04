@@ -4,6 +4,7 @@
     "cssclasses": "multitext",
     "tags": "tags",
     "dummy": "text",
-    "prio": "number"
+    "prio": "number",
+    "dueDate": "date"
   }
 }

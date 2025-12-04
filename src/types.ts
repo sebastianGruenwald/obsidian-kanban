@@ -79,5 +79,6 @@ export interface KanbanCard {
 	created: number;
 	modified: number;
 	content?: string;
+	dueDate?: number;
 	frontmatter: Record<string, any>;
 }

@@ -20,7 +20,8 @@
         "prio",
         "cover",
         "tags",
-        "image"
+        "image",
+        "test2"
       ],
       "sortBy": "creation",
       "sortOrder": "desc",

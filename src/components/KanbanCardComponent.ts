@@ -188,6 +188,33 @@ export class KanbanCardComponent {
 				dateEl.setText(new Date(this.card.modified).toLocaleDateString());
 			}
 
+			if (this.card.dueDate) {
+				const dateEl = footer.createSpan({ cls: 'kanban-card-date kanban-due-date' });
+				const dueDate = new Date(this.card.dueDate);
+				dateEl.setText(dueDate.toLocaleDateString());
+				setIcon(dateEl, 'calendar');
+
+				// Add status class
+				const now = new Date();
+				// Reset time part for accurate day comparison
+				now.setHours(0, 0, 0, 0);
+				const due = new Date(dueDate);
+				due.setHours(0, 0, 0, 0);
+
+				const diff = due.getTime() - now.getTime();
+				const days = diff / (1000 * 60 * 60 * 24);
+
+				if (days < 0) {
+					dateEl.addClass('is-overdue');
+					dateEl.setAttribute('title', 'Overdue');
+				} else if (days <= 2) {
+					dateEl.addClass('is-due-soon');
+					dateEl.setAttribute('title', 'Due soon');
+				} else {
+					dateEl.setAttribute('title', 'Due date');
+				}
+			}
+
 			// Subtask Progress
 			this.renderSubtaskProgress(footer);
 		}
@@ -315,6 +342,11 @@ export class KanbanCardComponent {
 					this.element.removeAttribute('data-card-color');
 				} else {
 					this.element.setAttribute('data-card-color', newColor);
+				}
+			},
+			async (newDate) => {
+				if (this.dataManager) {
+					await this.dataManager.updateCardDueDate(this.card.file, newDate);
 				}
 			}
 		).show(event);

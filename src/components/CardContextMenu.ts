@@ -1,6 +1,6 @@
 import { App, Menu, TFile, Notice } from 'obsidian';
 import { KanbanCard } from '../types';
-import { ColorPickerModal, ConfirmModal } from '../modals';
+import { ColorPickerModal, ConfirmModal, DatePickerModal } from '../modals';
 
 export class CardContextMenu {
     constructor(
@@ -11,7 +11,8 @@ export class CardContextMenu {
         private onMove: (filePath: string, newColumn: string) => void,
         private onArchive: (card: KanbanCard) => void,
         private onTitleEdit: () => void,
-        private onColorChange: (newColor: string) => void
+        private onColorChange: (newColor: string) => void,
+        private onDueDateChange: (newDate: string | null) => void
     ) { }
 
     show(event: MouseEvent): void {
@@ -49,6 +50,18 @@ export class CardContextMenu {
                         this.card.file,
                         this.card.frontmatter?.cardColor,
                         (newColor) => this.onColorChange(newColor)
+                    ).open();
+                });
+        });
+
+        menu.addItem((item) => {
+            item.setTitle('Set due date')
+                .setIcon('calendar')
+                .onClick(() => {
+                    new DatePickerModal(
+                        this.app,
+                        this.card.dueDate,
+                        (newDate) => this.onDueDateChange(newDate)
                     ).open();
                 });
         });

@@ -64,6 +64,7 @@ export class DataManager {
 				column: column,
 				created: file.stat.ctime,
 				modified: file.stat.mtime,
+				dueDate: frontmatter.dueDate ? Date.parse(frontmatter.dueDate) : undefined,
 				// Content is lazy loaded or not loaded if not needed
 				frontmatter: frontmatter
 			};
@@ -279,6 +280,28 @@ export class DataManager {
 			console.error('Error updating card tags:', error);
 			const message = error instanceof Error ? error.message : 'Unknown error';
 			showError(`Failed to update tags: ${message}`);
+			throw error;
+		}
+	}
+
+	async updateCardDueDate(cardPath: string, dueDate: string | null): Promise<void> {
+		try {
+			const file = this.app.vault.getAbstractFileByPath(cardPath);
+			if (!(file instanceof TFile)) {
+				throw new Error('File not found');
+			}
+
+			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				if (dueDate) {
+					frontmatter.dueDate = dueDate;
+				} else {
+					delete frontmatter.dueDate;
+				}
+			});
+		} catch (error) {
+			console.error('Error updating card due date:', error);
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			showError(`Failed to update due date: ${message}`);
 			throw error;
 		}
 	}

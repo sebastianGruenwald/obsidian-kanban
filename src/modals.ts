@@ -52,7 +52,7 @@ export class ColorPickerModal extends Modal {
 
 		for (const color of CARD_COLORS) {
 			const colorBtn = colorGrid.createDiv({ cls: 'kanban-color-option' });
-			
+
 			if (color.value === 'none') {
 				// Special styling for 'no color' option
 				colorBtn.addClass('no-color');
@@ -60,9 +60,9 @@ export class ColorPickerModal extends Modal {
 			} else {
 				colorBtn.style.backgroundColor = color.color;
 			}
-			
+
 			colorBtn.setAttribute('title', color.name);
-			
+
 			if (this.currentColor === color.value || (!this.currentColor && color.value === 'none')) {
 				colorBtn.addClass('selected');
 			}
@@ -148,7 +148,7 @@ export class CreateCardModal extends Modal {
 
 	private async createCard(): Promise<void> {
 		const title = this.titleInput.getValue().trim();
-		
+
 		if (!title) {
 			showError('Card title cannot be empty');
 			return;
@@ -211,7 +211,7 @@ export class AddColumnModal extends Modal {
 
 	private async addColumn(): Promise<void> {
 		const columnName = this.columnInput.getValue().trim();
-		
+
 		if (!columnName) {
 			showError('Column name cannot be empty');
 			return;
@@ -283,7 +283,7 @@ export class RenameColumnModal extends Modal {
 
 	private async renameColumn(): Promise<void> {
 		const newColumnName = this.columnInput.getValue().trim();
-		
+
 		if (!newColumnName) {
 			showError('Column name cannot be empty');
 			return;
@@ -303,12 +303,12 @@ export class RenameColumnModal extends Modal {
 
 			// Handle renaming for default columns
 			if (board.defaultColumns.includes(this.oldColumnName)) {
-				const newDefaultColumns = board.defaultColumns.map(col => 
+				const newDefaultColumns = board.defaultColumns.map(col =>
 					col === this.oldColumnName ? newColumnName : col
 				);
 				this.plugin.boardManager.updateBoard(this.boardId, { defaultColumns: newDefaultColumns });
 			}
-			
+
 			// Handle renaming for custom columns
 			if (board.customColumns.includes(this.oldColumnName)) {
 				this.plugin.boardManager.removeColumnFromBoard(this.boardId, this.oldColumnName);
@@ -317,7 +317,7 @@ export class RenameColumnModal extends Modal {
 
 			// Update column order if it exists
 			if (board.columnOrder.includes(this.oldColumnName)) {
-				const newOrder = board.columnOrder.map(col => 
+				const newOrder = board.columnOrder.map(col =>
 					col === this.oldColumnName ? newColumnName : col
 				);
 				this.plugin.boardManager.updateColumnOrder(this.boardId, newOrder);
@@ -384,7 +384,7 @@ export class CreateBoardModal extends Modal {
 	private async createBoard(): Promise<void> {
 		const name = this.nameInput.getValue().trim();
 		let tag = this.tagInput.getValue().trim();
-		
+
 		const nameValidation = validateBoardName(name);
 		if (!nameValidation.valid) {
 			showError(nameValidation.error || 'Invalid board name');
@@ -434,7 +434,7 @@ export class ConfirmModal extends Modal {
 		contentEl.createEl('p', { text: this.message });
 
 		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-		
+
 		new Setting(buttonContainer)
 			.addButton(button => button
 				.setButtonText(this.confirmText)
@@ -454,5 +454,66 @@ export class ConfirmModal extends Modal {
 	onClose(): void {
 		const { contentEl } = this;
 		contentEl.empty();
+	}
+}
+
+/**
+ * Modal for setting a due date
+ */
+export class DatePickerModal extends Modal {
+	private dateInput!: TextComponent;
+
+	constructor(
+		app: App,
+		private currentDueDate: number | undefined,
+		private onSubmit: (date: string | null) => void
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Set Due Date' });
+
+		new Setting(contentEl)
+			.setName('Due Date')
+			.addText(text => {
+				this.dateInput = text;
+				text.inputEl.type = 'date';
+				if (this.currentDueDate) {
+					// Format timestamp to YYYY-MM-DD
+					const date = new Date(this.currentDueDate);
+					if (!isNaN(date.getTime())) {
+						const year = date.getFullYear();
+						const month = String(date.getMonth() + 1).padStart(2, '0');
+						const day = String(date.getDate()).padStart(2, '0');
+						text.setValue(`${year}-${month}-${day}`);
+					}
+				}
+			});
+
+		new Setting(contentEl)
+			.addButton(button => button
+				.setButtonText('Save')
+				.setCta()
+				.onClick(() => {
+					const val = this.dateInput.getValue();
+					this.onSubmit(val ? val : null);
+					this.close();
+				}))
+			.addButton(button => button
+				.setButtonText('Clear')
+				.setWarning()
+				.onClick(() => {
+					this.onSubmit(null);
+					this.close();
+				}))
+			.addButton(button => button
+				.setButtonText('Cancel')
+				.onClick(() => this.close()));
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
 	}
 }
