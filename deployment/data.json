@@ -42,48 +42,9 @@
         "banner"
       ],
       "theme": "default"
-    },
-    {
-      "id": "test",
-      "name": "test",
-      "tagFilter": "#test",
-      "columnProperty": "status",
-      "defaultColumns": [
-        "To Do",
-        "In Progress",
-        "Done"
-      ],
-      "customColumns": [],
-      "columnWidths": {},
-      "columnOrder": [],
-      "visibleProperties": [
-        "title",
-        "created"
-      ],
-      "sortBy": "creation",
-      "sortOrder": "desc",
-      "cardDensity": "comfortable",
-      "tagColors": {},
-      "showColumnBackgrounds": false,
-      "colorfulHeaders": true,
-      "showCardColors": true,
-      "wipLimits": {},
-      "cardAging": false,
-      "cardAgingThreshold": 7,
-      "autoMoveCompleted": false,
-      "autoArchiveDelay": 0,
-      "swimlaneProperty": null,
-      "imageDisplayMode": "cover",
-      "imageProperties": [
-        "cover",
-        "image",
-        "thumbnail",
-        "banner"
-      ],
-      "theme": "default"
     }
   ],
-  "activeBoard": "test",
+  "activeBoard": "default",
   "autoRefresh": true,
   "showFileCount": true,
   "cardTemplate": "",

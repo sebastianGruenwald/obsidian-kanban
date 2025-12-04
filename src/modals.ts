@@ -404,6 +404,7 @@ export class CreateBoardModal extends Modal {
 			this.plugin.boardManager.addBoard(newBoard);
 			this.plugin.settings.activeBoard = newBoard.id;
 			await this.plugin.saveSettings();
+			this.plugin.refreshAllViews(); // Refresh views to update board dropdown
 			showSuccess('Board created successfully');
 			this.close();
 			this.onSubmit();
