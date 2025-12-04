@@ -110,10 +110,10 @@ export class KanbanCardComponent {
 
 		// Container for tags and properties
 		const body = cardEl.createDiv({ cls: 'kanban-card-body' });
-		
+
 		// Footer for dates and progress
 		const footer = cardEl.createDiv({ cls: 'kanban-card-footer' });
-		
+
 		this.renderProperties(body, footer);
 	}
 
@@ -121,7 +121,7 @@ export class KanbanCardComponent {
 		const visibleProperties = this.boardConfig.visibleProperties;
 
 		if (visibleProperties.includes('tags')) {
-			const tags = this.card.frontmatter.tags 
+			const tags = this.card.frontmatter.tags
 				? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
 				: [];
 
@@ -130,7 +130,7 @@ export class KanbanCardComponent {
 			const displayTags = tags.filter((t: string) => t.replace('#', '') !== boardTag);
 
 			const tagsContainer = body.createDiv({ cls: 'kanban-card-tags-container' });
-			
+
 			if (displayTags.length > 0) {
 				displayTags.forEach((tag: string) => {
 					const cleanTag = tag.replace('#', '');
@@ -164,7 +164,7 @@ export class KanbanCardComponent {
 		// Show custom frontmatter properties (excluding images)
 		const imageProps = this.boardConfig.imageProperties || [];
 		visibleProperties.forEach(prop => {
-			if (!['title', 'created', 'modified', 'tags'].includes(prop) 
+			if (!['title', 'created', 'modified', 'tags'].includes(prop)
 				&& !imageProps.includes(prop)
 				&& this.card.frontmatter[prop]) {
 				const propEl = body.createDiv({ cls: 'kanban-card-property' });
@@ -194,17 +194,17 @@ export class KanbanCardComponent {
 
 	private renderCardImage(cardEl: HTMLElement): void {
 		const imageProps = this.boardConfig.imageProperties;
-		
+
 		if (!imageProps || imageProps.length === 0) {
 			return;
 		}
 
 		const visibleProperties = this.boardConfig.visibleProperties;
-		
+
 		// Find the first visible image property that has a value
 		let imageUrl: string | null = null;
 		let imageProp: string | null = null;
-		
+
 		for (const prop of imageProps) {
 			if (visibleProperties.includes(prop) && this.card.frontmatter[prop]) {
 				const value = this.card.frontmatter[prop];
@@ -226,7 +226,7 @@ export class KanbanCardComponent {
 		}
 
 		const displayMode = this.boardConfig.imageDisplayMode || 'cover';
-		
+
 		if (displayMode === 'cover') {
 			const coverEl = cardEl.createDiv({ cls: 'kanban-card-cover' });
 			coverEl.style.backgroundImage = `url("${resolvedUrl}")`;
@@ -413,7 +413,7 @@ export class KanbanCardComponent {
 		}
 
 		const currentTitle = this.card.title;
-		const originalHtml = titleEl.innerHTML;
+		const originalText = titleEl.textContent || '';
 
 		// Replace title with input
 		titleEl.empty();
@@ -447,10 +447,10 @@ export class KanbanCardComponent {
 					}
 				} catch (error) {
 					// Restore original on error
-					titleEl.innerHTML = originalHtml;
+					titleEl.textContent = originalText;
 				}
 			} else {
-				titleEl.innerHTML = originalHtml;
+				titleEl.textContent = originalText;
 			}
 		};
 
@@ -469,11 +469,20 @@ export class KanbanCardComponent {
 	}
 
 	private renderSubtaskProgress(container: HTMLElement): void {
-		const content = this.card.content;
-		const total = (content.match(/- \[[ x]\]/g) || []).length;
-		if (total === 0) return;
+		const file = this.app.vault.getAbstractFileByPath(this.card.file);
+		if (!(file instanceof TFile)) return;
 
-		const completed = (content.match(/- \[x\]/g) || []).length;
+		const cache = this.app.metadataCache.getFileCache(file);
+		const listItems = cache?.listItems;
+
+		if (!listItems || listItems.length === 0) return;
+
+		// Filter for task items
+		const tasks = listItems.filter(item => item.task !== undefined);
+		if (tasks.length === 0) return;
+
+		const total = tasks.length;
+		const completed = tasks.filter(task => task.task === 'x' || task.task === 'X').length;
 		const percentage = Math.round((completed / total) * 100);
 
 		const progressContainer = container.createDiv({ cls: 'kanban-subtask-progress' });
@@ -487,13 +496,6 @@ export class KanbanCardComponent {
 			cls: 'kanban-subtask-count',
 			text: `${completed}/${total}`
 		});
-
-		// Optional: Mini progress bar
-		// const bar = progressContainer.createDiv({ cls: 'kanban-subtask-bar' });
-		// bar.createDiv({ 
-		// 	cls: 'kanban-subtask-bar-fill',
-		// 	attr: { style: `width: ${percentage}%` }
-		// });
 	}
 
 	private applyCardAging(cardEl: HTMLElement): void {
@@ -523,7 +525,7 @@ export class KanbanCardComponent {
 		if (!this.dataManager) return;
 
 		try {
-			const tags = this.card.frontmatter.tags 
+			const tags = this.card.frontmatter.tags
 				? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
 				: [];
 
@@ -538,7 +540,7 @@ export class KanbanCardComponent {
 			}
 
 			await this.dataManager.updateCardTags(this.card.file, updatedTags);
-			
+
 			// Update card in-place instead of full refresh
 			this.card.frontmatter.tags = updatedTags.length === 1 ? updatedTags[0] : (updatedTags.length > 0 ? updatedTags : undefined);
 			this.refreshCardContent();
@@ -551,14 +553,14 @@ export class KanbanCardComponent {
 		// Find and update only the card body and footer
 		const bodyEl = this.element.querySelector('.kanban-card-body');
 		const footerEl = this.element.querySelector('.kanban-card-footer');
-		
+
 		if (bodyEl) {
 			bodyEl.empty();
 		}
 		if (footerEl) {
 			footerEl.empty();
 		}
-		
+
 		if (bodyEl && footerEl) {
 			this.renderProperties(bodyEl as HTMLElement, footerEl as HTMLElement);
 		}
@@ -574,7 +576,7 @@ export class KanbanCardComponent {
 		const inputWrapper = container.createSpan({ cls: 'kanban-tag-input-wrapper' });
 		const input = inputWrapper.createEl('input', {
 			cls: 'kanban-tag-input',
-			attr: { 
+			attr: {
 				type: 'text',
 				placeholder: 'tag name',
 				autocomplete: 'off'
@@ -597,40 +599,28 @@ export class KanbanCardComponent {
 
 		// Get all unique tags from vault
 		const getAllVaultTags = (): string[] => {
-			const tags = new Set<string>();
-			const files = this.app.vault.getMarkdownFiles();
-			
-			files.forEach(file => {
-				const cache = this.app.metadataCache.getFileCache(file);
-				if (cache?.frontmatter?.tags) {
-					const fileTags = Array.isArray(cache.frontmatter.tags) 
-						? cache.frontmatter.tags 
-						: [cache.frontmatter.tags];
-					fileTags.forEach((t: string) => tags.add(t.replace(/^#/, '')));
-				}
-				if (cache?.tags) {
-					cache.tags.forEach(t => tags.add(t.tag.replace(/^#/, '')));
-				}
-			});
-			
-			// Exclude board tag and already added tags
-			const boardTag = this.boardConfig.tagFilter?.replace('#', '');
-			const existingTags = this.card.frontmatter.tags 
-				? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
-				: [];
-			const existingClean = existingTags.map((t: string) => t.replace(/^#/, ''));
-			
-			return Array.from(tags)
-				.filter(t => t !== boardTag && !existingClean.includes(t))
-				.sort();
+			if (this.dataManager) {
+				const allTags = this.dataManager.getAllVaultTags();
+
+				// Exclude board tag and already added tags
+				const boardTag = this.boardConfig.tagFilter?.replace('#', '');
+				const existingTags = this.card.frontmatter.tags
+					? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
+					: [];
+				const existingClean = existingTags.map((t: string) => t.replace(/^#/, ''));
+
+				return allTags
+					.filter(t => t !== boardTag && !existingClean.includes(t));
+			}
+			return [];
 		};
 
 		const updateSuggestions = (query: string) => {
 			const allTags = getAllVaultTags();
-			currentSuggestions = query 
+			currentSuggestions = query
 				? allTags.filter(tag => tag.toLowerCase().includes(query.toLowerCase()))
 				: allTags;
-			
+
 			selectedIndex = -1;
 			updateDropdownPosition();
 			renderSuggestions();
@@ -638,30 +628,30 @@ export class KanbanCardComponent {
 
 		const renderSuggestions = () => {
 			suggestionList.empty();
-			
+
 			if (currentSuggestions.length === 0) {
 				suggestionList.style.display = 'none';
 				return;
 			}
-			
+
 			suggestionList.style.display = 'block';
 			const maxSuggestions = 8;
 			currentSuggestions.slice(0, maxSuggestions).forEach((tag, index) => {
-				const item = suggestionList.createDiv({ 
+				const item = suggestionList.createDiv({
 					cls: 'kanban-tag-suggestion-item',
 					text: tag
 				});
-				
+
 				if (index === selectedIndex) {
 					item.addClass('selected');
 				}
-				
+
 				item.addEventListener('mousedown', (e) => {
 					e.preventDefault();
 					input.value = tag;
 					finishAdd(true);
 				});
-				
+
 				item.addEventListener('mouseenter', () => {
 					selectedIndex = index;
 					renderSuggestions();
@@ -673,20 +663,20 @@ export class KanbanCardComponent {
 
 		const finishAdd = async (save: boolean) => {
 			const newTag = input.value.trim().replace(/^#/, '');
-			
+
 			if (save && newTag && this.dataManager) {
 				try {
-					const tags = this.card.frontmatter.tags 
+					const tags = this.card.frontmatter.tags
 						? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
 						: [];
 
 					const cleanTags = tags.map((t: string) => t.replace('#', ''));
-					
+
 					// Add new tag if it doesn't exist
 					if (!cleanTags.includes(newTag)) {
 						cleanTags.push(newTag);
 						await this.dataManager.updateCardTags(this.card.file, cleanTags);
-						
+
 						// Update card in-place instead of full refresh
 						this.card.frontmatter.tags = cleanTags.length === 1 ? cleanTags[0] : cleanTags;
 						this.refreshCardContent();

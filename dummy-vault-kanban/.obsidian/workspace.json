@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "todo 1.md",
+                "file": "test 2.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "todo 1"
+              "title": "test 2"
             }
           }
         ]
@@ -194,12 +194,12 @@
       "obsidian-kanban:Open Kanban Board": false
     }
   },
-  "active": "54d4a9b0076b09ea",
+  "active": "ebb7f83a7bfa933a",
   "lastOpenFiles": [
     "test.md",
+    "todo 1.md",
     "test 2.md",
     "Pasted image 20251204083636.png",
-    "todo 1.md",
     "Pasted image 20251204083430.png",
     "Welcome.md"
   ]

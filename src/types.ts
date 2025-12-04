@@ -78,6 +78,6 @@ export interface KanbanCard {
 	column: string;
 	created: number;
 	modified: number;
-	content: string;
+	content?: string;
 	frontmatter: Record<string, any>;
 }

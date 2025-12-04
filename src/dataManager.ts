@@ -5,6 +5,8 @@ import { DEFAULTS } from './constants';
 import { getRandomCardColor } from './modals';
 
 export class DataManager {
+	private tagCache: string[] | null = null;
+
 	constructor(
 		private app: App,
 		private boardConfig: BoardConfig,
@@ -53,8 +55,6 @@ export class DataManager {
 	private async createCardFromFile(file: TFile): Promise<KanbanCard | null> {
 		try {
 			const cache = this.app.metadataCache.getFileCache(file);
-			const content = await this.app.vault.read(file);
-
 			const frontmatter = cache?.frontmatter || {};
 			const column = frontmatter[this.boardConfig.columnProperty] || DEFAULTS.UNCATEGORIZED_COLUMN;
 
@@ -64,7 +64,7 @@ export class DataManager {
 				column: column,
 				created: file.stat.ctime,
 				modified: file.stat.mtime,
-				content: content,
+				// Content is lazy loaded or not loaded if not needed
 				frontmatter: frontmatter
 			};
 		} catch (error) {
@@ -266,7 +266,7 @@ export class DataManager {
 			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
 				// Ensure tags are properly formatted (without # prefix for frontmatter)
 				const cleanTags = tags.map(tag => tag.replace(/^#/, ''));
-				
+
 				if (cleanTags.length === 0) {
 					delete frontmatter.tags;
 				} else if (cleanTags.length === 1) {
@@ -315,12 +315,43 @@ export class DataManager {
 	}
 
 	private isCardCompleted(card: KanbanCard): boolean {
-		const regex = /- \[([ x])\]/g;
-		const matches = [...card.content.matchAll(regex)];
+		// Use metadata cache to check for completion without reading file content
+		const file = this.app.vault.getAbstractFileByPath(card.file);
+		if (!(file instanceof TFile)) return false;
 
-		if (matches.length === 0) return false; // No tasks, not "completed"
+		const cache = this.app.metadataCache.getFileCache(file);
+		const listItems = cache?.listItems;
 
-		const allChecked = matches.every(match => match[1] === 'x');
-		return allChecked;
+		if (!listItems || listItems.length === 0) return false;
+
+		// Filter for task items
+		const tasks = listItems.filter(item => item.task !== undefined);
+		if (tasks.length === 0) return false;
+
+		// Check if all tasks are completed (x or X)
+		return tasks.every(task => task.task === 'x' || task.task === 'X');
+	}
+
+	getAllVaultTags(): string[] {
+		if (this.tagCache) return this.tagCache;
+
+		const tags = new Set<string>();
+		const files = this.app.vault.getMarkdownFiles();
+
+		files.forEach(file => {
+			const cache = this.app.metadataCache.getFileCache(file);
+			if (cache?.frontmatter?.tags) {
+				const fileTags = Array.isArray(cache.frontmatter.tags)
+					? cache.frontmatter.tags
+					: [cache.frontmatter.tags];
+				fileTags.forEach((t: string) => tags.add(t.replace(/^#/, '')));
+			}
+			if (cache?.tags) {
+				cache.tags.forEach(t => tags.add(t.tag.replace(/^#/, '')));
+			}
+		});
+
+		this.tagCache = Array.from(tags).sort();
+		return this.tagCache;
 	}
 }

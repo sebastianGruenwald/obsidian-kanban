@@ -151,7 +151,7 @@ export class KanbanView extends ItemView {
 		const filteredCards = this.cards.filter(card => {
 			const matchesSearch = !this.searchQuery ||
 				card.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-				card.content.toLowerCase().includes(this.searchQuery.toLowerCase());
+				(card.content && card.content.toLowerCase().includes(this.searchQuery.toLowerCase()));
 
 			if (!matchesSearch) return false;
 
@@ -189,15 +189,15 @@ export class KanbanView extends ItemView {
 				{
 					onCardMove: (filePath, newColumn) => this.moveCard(filePath, newColumn),
 					onCardArchive: (card) => this.archiveCard(card),
-				onColumnRename: () => this.refresh(),
-				onColumnDelete: async () => {
-					if (this.currentBoard) {
-						this.plugin.boardManager.removeColumnFromBoard(this.currentBoard.id, columnName);
-						await this.plugin.saveSettings();
-						await this.refresh();
-					}
-				},
-				onColumnReorder: (draggedColumn, targetColumn) => { },
+					onColumnRename: () => this.refresh(),
+					onColumnDelete: async () => {
+						if (this.currentBoard) {
+							this.plugin.boardManager.removeColumnFromBoard(this.currentBoard.id, columnName);
+							await this.plugin.saveSettings();
+							await this.refresh();
+						}
+					},
+					onColumnReorder: (draggedColumn, targetColumn) => { },
 					onColumnResize: async (width) => {
 						if (this.currentBoard) {
 							const columnWidths = this.currentBoard.columnWidths || {};
@@ -642,7 +642,7 @@ export class KanbanView extends ItemView {
 			const item = popup.createDiv({ cls: 'kanban-popup-item' });
 			const currentTheme = this.currentBoard?.theme || 'default';
 			const isActive = currentTheme === theme.value;
-			
+
 			if (isActive) {
 				item.addClass('is-active');
 			}
@@ -716,7 +716,7 @@ export class KanbanView extends ItemView {
 
 		availableProperties.forEach(prop => {
 			const item = popup.createDiv({ cls: 'kanban-popup-item kanban-popup-checkbox-item' });
-			
+
 			const checkbox = item.createEl('input', {
 				type: 'checkbox',
 				cls: 'kanban-popup-checkbox'
@@ -728,10 +728,10 @@ export class KanbanView extends ItemView {
 			const toggleProperty = async () => {
 				const currentProps = this.currentBoard!.visibleProperties;
 				let newProps: string[];
-				
+
 				if (checkbox.checked) {
-					newProps = currentProps.includes(prop.key) 
-						? currentProps 
+					newProps = currentProps.includes(prop.key)
+						? currentProps
 						: [...currentProps, prop.key];
 				} else {
 					newProps = currentProps.filter(p => p !== prop.key);
