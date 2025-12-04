@@ -23,6 +23,7 @@ export interface BoardConfig {
 	swimlaneProperty: string | null; // Property to use for swimlanes (null to disable)
 	imageDisplayMode: 'cover' | 'thumbnail'; // How to display image properties
 	imageProperties: string[]; // Properties that contain images
+	theme: 'default' | 'sticky-notes'; // Board theme
 }
 
 export interface KanbanSettings {
@@ -58,7 +59,8 @@ export const DEFAULT_BOARD: BoardConfig = {
 	autoArchiveDelay: 0,
 	swimlaneProperty: null,
 	imageDisplayMode: 'cover',
-	imageProperties: ['cover', 'image', 'thumbnail', 'banner']
+	imageProperties: ['cover', 'image', 'thumbnail', 'banner'],
+	theme: 'default'
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {

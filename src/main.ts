@@ -196,14 +196,13 @@ export default class KanbanPlugin extends Plugin {
 				this.settings.boards = [DEFAULT_SETTINGS.boards[0]];
 			}
 			
-			// Migrate existing boards to add new properties
-			this.settings.boards = this.settings.boards.map(board => ({
-				...board,
-				imageDisplayMode: board.imageDisplayMode || 'cover',
-				imageProperties: board.imageProperties || ['cover', 'image', 'thumbnail', 'banner']
-			}));
-			
-			// Ensure active board exists
+		// Migrate existing boards to add new properties
+		this.settings.boards = this.settings.boards.map(board => ({
+			...board,
+			imageDisplayMode: board.imageDisplayMode || 'cover',
+			imageProperties: board.imageProperties || ['cover', 'image', 'thumbnail', 'banner'],
+			theme: board.theme || 'default'
+		}));			// Ensure active board exists
 			if (!this.settings.activeBoard || !this.settings.boards.find(b => b.id === this.settings.activeBoard)) {
 				this.settings.activeBoard = this.settings.boards[0].id;
 			}

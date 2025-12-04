@@ -62,6 +62,15 @@ export class KanbanView extends ItemView {
 		this.updateCurrentBoard();
 		if (!this.currentBoard || !this.dataManager) return;
 
+		// Apply theme
+		document.body.classList.remove('theme-default', 'theme-sticky-notes');
+		if (this.currentBoard.theme) {
+			document.body.classList.add(`theme-${this.currentBoard.theme}`);
+		} else {
+			// Default to modern theme if not set
+			document.body.classList.add('theme-default');
+		}
+
 		this.cards = await this.dataManager.getKanbanCards();
 
 		// Run automations
@@ -631,7 +640,8 @@ export class KanbanView extends ItemView {
 
 		themes.forEach(theme => {
 			const item = popup.createDiv({ cls: 'kanban-popup-item' });
-			const isActive = document.body.classList.contains(`theme-${theme.value}`);
+			const currentTheme = this.currentBoard?.theme || 'default';
+			const isActive = currentTheme === theme.value;
 			
 			if (isActive) {
 				item.addClass('is-active');
@@ -641,11 +651,15 @@ export class KanbanView extends ItemView {
 			setIcon(iconEl, theme.icon);
 			item.createSpan({ text: theme.label, cls: 'kanban-popup-item-label' });
 
-			item.addEventListener('click', () => {
-				// Remove all theme classes
-				document.body.classList.remove('theme-default', 'theme-sticky-notes');
-				// Add selected theme
-				document.body.classList.add(`theme-${theme.value}`);
+			item.addEventListener('click', async () => {
+				if (this.currentBoard) {
+					// Update board config
+					this.plugin.boardManager.updateBoard(this.currentBoard.id, { theme: theme.value as 'default' | 'sticky-notes' });
+					await this.plugin.saveSettings();
+					// Apply theme immediately
+					document.body.classList.remove('theme-default', 'theme-sticky-notes');
+					document.body.classList.add(`theme-${theme.value}`);
+				}
 				this.closeAllPopups();
 			});
 		});
