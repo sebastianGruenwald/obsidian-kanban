@@ -1,5 +1,5 @@
 ---
-status: To Do
+status: Done
 cardColor: orange
 tags:
   - kanban

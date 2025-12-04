@@ -7,6 +7,7 @@
       "columnProperty": "status",
       "defaultColumns": [
         "To Do",
+        "In Progress",
         "Done"
       ],
       "customColumns": [],
@@ -26,7 +27,7 @@
       "cardDensity": "comfortable",
       "tagColors": {},
       "showColumnBackgrounds": false,
-      "colorfulHeaders": true,
+      "colorfulHeaders": false,
       "showCardColors": true,
       "wipLimits": {},
       "cardAging": false,
@@ -34,7 +35,7 @@
       "autoMoveCompleted": false,
       "autoArchiveDelay": 0,
       "swimlaneProperty": null,
-      "imageDisplayMode": "thumbnail",
+      "imageDisplayMode": "cover",
       "imageProperties": [
         "cover",
         "image",
