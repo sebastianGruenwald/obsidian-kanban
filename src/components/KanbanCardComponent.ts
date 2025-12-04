@@ -100,6 +100,9 @@ export class KanbanCardComponent {
 	private renderCardContent(cardEl: HTMLElement): void {
 		const visibleProperties = this.boardConfig.visibleProperties;
 
+		// Render image if any image property is visible
+		this.renderCardImage(cardEl);
+
 		// Always show title
 		if (visibleProperties.includes('title')) {
 			cardEl.createDiv({ cls: 'kanban-card-title', text: this.card.title });
@@ -158,9 +161,12 @@ export class KanbanCardComponent {
 			});
 		}
 
-		// Show custom frontmatter properties
+		// Show custom frontmatter properties (excluding images)
+		const imageProps = this.boardConfig.imageProperties || [];
 		visibleProperties.forEach(prop => {
-			if (!['title', 'created', 'modified', 'tags'].includes(prop) && this.card.frontmatter[prop]) {
+			if (!['title', 'created', 'modified', 'tags'].includes(prop) 
+				&& !imageProps.includes(prop)
+				&& this.card.frontmatter[prop]) {
 				const propEl = body.createDiv({ cls: 'kanban-card-property' });
 				propEl.createSpan({ cls: 'kanban-card-property-key', text: prop });
 				propEl.createSpan({ cls: 'kanban-card-property-value', text: String(this.card.frontmatter[prop]) });
@@ -184,6 +190,90 @@ export class KanbanCardComponent {
 			// Subtask Progress
 			this.renderSubtaskProgress(footer);
 		}
+	}
+
+	private renderCardImage(cardEl: HTMLElement): void {
+		const imageProps = this.boardConfig.imageProperties;
+		
+		if (!imageProps || imageProps.length === 0) {
+			return;
+		}
+
+		const visibleProperties = this.boardConfig.visibleProperties;
+		
+		// Find the first visible image property that has a value
+		let imageUrl: string | null = null;
+		let imageProp: string | null = null;
+		
+		for (const prop of imageProps) {
+			if (visibleProperties.includes(prop) && this.card.frontmatter[prop]) {
+				const value = this.card.frontmatter[prop];
+				if (typeof value === 'string' && value.trim()) {
+					imageUrl = value;
+					imageProp = prop;
+					break;
+				}
+			}
+		}
+
+		if (!imageUrl) return;
+
+		// Resolve image path
+		const resolvedUrl = this.resolveImagePath(imageUrl);
+		if (!resolvedUrl) {
+			console.warn('Failed to resolve image path:', imageUrl);
+			return;
+		}
+
+		const displayMode = this.boardConfig.imageDisplayMode || 'cover';
+		
+		if (displayMode === 'cover') {
+			const coverEl = cardEl.createDiv({ cls: 'kanban-card-cover' });
+			coverEl.style.backgroundImage = `url("${resolvedUrl}")`;
+		} else {
+			const thumbnailEl = cardEl.createDiv({ cls: 'kanban-card-thumbnail-container' });
+			const imgEl = thumbnailEl.createEl('img', { cls: 'kanban-card-thumbnail' });
+			imgEl.src = resolvedUrl;
+			imgEl.alt = imageProp || 'Card image';
+		}
+	}
+
+	private resolveImagePath(imagePath: string): string | null {
+		// Handle external URLs
+		if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+			return imagePath;
+		}
+
+		// Handle obsidian links [[...]]
+		const wikiLinkMatch = imagePath.match(/\[\[([^\]]+)\]\]/);
+		if (wikiLinkMatch) {
+			imagePath = wikiLinkMatch[1];
+		}
+
+		// Remove any alias from wiki link
+		const pipeIndex = imagePath.indexOf('|');
+		if (pipeIndex !== -1) {
+			imagePath = imagePath.substring(0, pipeIndex);
+		}
+
+		// Try to find the file in the vault
+		const file = this.app.metadataCache.getFirstLinkpathDest(imagePath, this.card.file);
+		if (file) {
+			return this.app.vault.getResourcePath(file);
+		}
+
+		// If it's a relative path, try to resolve it
+		if (imagePath.startsWith('./') || imagePath.startsWith('../') || !imagePath.startsWith('/')) {
+			const cardFile = this.app.vault.getAbstractFileByPath(this.card.file);
+			if (cardFile) {
+				const resolvedFile = this.app.metadataCache.getFirstLinkpathDest(imagePath, this.card.file);
+				if (resolvedFile) {
+					return this.app.vault.getResourcePath(resolvedFile);
+				}
+			}
+		}
+
+		return null;
 	}
 
 	private getTagColor(tag: string): string {

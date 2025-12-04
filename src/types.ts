@@ -21,6 +21,8 @@ export interface BoardConfig {
 	autoMoveCompleted: boolean; // Move to last column when all subtasks checked
 	autoArchiveDelay: number; // Archive cards in last column after X days (0 to disable)
 	swimlaneProperty: string | null; // Property to use for swimlanes (null to disable)
+	imageDisplayMode: 'cover' | 'thumbnail'; // How to display image properties
+	imageProperties: string[]; // Properties that contain images
 }
 
 export interface KanbanSettings {
@@ -54,7 +56,9 @@ export const DEFAULT_BOARD: BoardConfig = {
 	cardAgingThreshold: 7,
 	autoMoveCompleted: false,
 	autoArchiveDelay: 0,
-	swimlaneProperty: null
+	swimlaneProperty: null,
+	imageDisplayMode: 'cover',
+	imageProperties: ['cover', 'image', 'thumbnail', 'banner']
 };
 
 export const DEFAULT_SETTINGS: KanbanSettings = {

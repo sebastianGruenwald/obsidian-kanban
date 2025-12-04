@@ -5,7 +5,7 @@ tags:
   - kanban
   - test
   - dummy
-prio: "1"
-dummy: "5"
+prio: 1
+dummy:
 ---
 # todo 1

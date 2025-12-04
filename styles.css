@@ -1093,6 +1093,33 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
   word-wrap: break-word;
 }
 
+/* Card Cover Image */
+.kanban-card-cover {
+  width: calc(100% + 2 * var(--k-space-md));
+  height: 120px;
+  margin: calc(-1 * var(--k-space-md)) calc(-1 * var(--k-space-md)) var(--k-space-sm);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: var(--k-radius-md) var(--k-radius-md) 0 0;
+  flex-shrink: 0;
+}
+
+/* Card Thumbnail Image */
+.kanban-card-thumbnail-container {
+  width: 100%;
+  margin-bottom: var(--k-space-sm);
+  display: flex;
+  justify-content: center;
+}
+
+.kanban-card-thumbnail {
+  max-width: 100%;
+  max-height: 80px;
+  border-radius: var(--k-radius-sm);
+  object-fit: contain;
+}
+
 /* --- Inline Card Creation --- */
 .kanban-card-new {
   animation: cardAppear 0.15s ease-out;

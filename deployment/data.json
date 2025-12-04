@@ -15,7 +15,12 @@
       "columnOrder": [],
       "visibleProperties": [
         "title",
-        "created"
+        "created",
+        "dummy",
+        "prio",
+        "cover",
+        "tags",
+        "image"
       ],
       "sortBy": "creation",
       "sortOrder": "desc",
@@ -29,7 +34,14 @@
       "cardAgingThreshold": 7,
       "autoMoveCompleted": false,
       "autoArchiveDelay": 0,
-      "swimlaneProperty": null
+      "swimlaneProperty": null,
+      "imageDisplayMode": "thumbnail",
+      "imageProperties": [
+        "cover",
+        "image",
+        "thumbnail",
+        "banner"
+      ]
     }
   ],
   "activeBoard": "default",

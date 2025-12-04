@@ -143,8 +143,8 @@ export class KanbanSettingTab extends PluginSettingTab {
 		// Custom columns management
 		this.displayColumnManagement(contentDiv, board);
 
-		// Visible properties
-		this.displayVisibleProperties(contentDiv, board);
+		// Image Display Settings
+		this.displayImageSettings(contentDiv, board);
 
 		// Sort settings
 		new Setting(contentDiv)
@@ -520,99 +520,40 @@ export class KanbanSettingTab extends PluginSettingTab {
 				}));
 	}
 
-	private displayVisibleProperties(containerEl: HTMLElement, board: BoardConfig): void {
-		const propertiesSection = containerEl.createDiv({ cls: 'visible-properties' });
-		propertiesSection.createEl('h4', { text: 'Visible Properties' });
+	private displayImageSettings(containerEl: HTMLElement, board: BoardConfig): void {
+		const imageSection = containerEl.createDiv({ cls: 'image-settings' });
+		imageSection.createEl('h4', { text: 'Image Properties' });
 
-		const availableProperties = ['title', 'created', 'modified', 'tags', ...this.plugin.settings.defaultVisibleProperties];
-		const uniqueProperties = [...new Set(availableProperties)];
-
-		uniqueProperties.forEach(property => {
-			new Setting(propertiesSection)
-				.setName(property.charAt(0).toUpperCase() + property.slice(1))
-				.addToggle(toggle => toggle
-					.setValue(board.visibleProperties.includes(property))
-					.onChange(async (value) => {
-						let visibleProperties = value 
-							? (board.visibleProperties.includes(property) 
-								? board.visibleProperties 
-								: [...board.visibleProperties, property])
-							: board.visibleProperties.filter(p => p !== property);
-						// Remove duplicates to fix any existing issues
-						visibleProperties = [...new Set(visibleProperties)];
-						this.plugin.boardManager.updateBoard(board.id, { visibleProperties });
-						await this.plugin.saveSettings();
-						this.plugin.refreshAllViews();
-					}));
-		});
-
-		// Add new property manually
-		new Setting(propertiesSection)
-			.setName('Add Custom Property')
-			.setDesc('Add a frontmatter property to the list')
-			.addText(text => text
-				.setPlaceholder('property_name')
+		// Image display mode
+		new Setting(imageSection)
+			.setName('Image Display Mode')
+			.setDesc('How to display image properties on cards')
+			.addDropdown(dropdown => dropdown
+				.addOption('cover', 'Cover (Full width)')
+				.addOption('thumbnail', 'Thumbnail (Centered)')
+				.setValue(board.imageDisplayMode || 'cover')
 				.onChange(async (value) => {
-					// Just storing the value for the button
-					text.inputEl.setAttribute('data-value', value);
-				}))
-			.addButton(button => button
-				.setButtonText('Add')
-				.onClick(async () => {
-					const input = button.buttonEl.parentElement?.parentElement?.querySelector('input');
-					const value = input?.getAttribute('data-value');
-					if (value && !uniqueProperties.includes(value)) {
-						this.plugin.settings.defaultVisibleProperties.push(value);
-						await this.plugin.saveSettings();
-						this.display();
-					}
+					this.plugin.boardManager.updateBoard(board.id, { imageDisplayMode: value as 'cover' | 'thumbnail' });
+					await this.plugin.saveSettings();
+					this.plugin.debouncedRefresh();
 				}));
 
-		// Scan for properties button
-		new Setting(propertiesSection)
-			.setName('Scan for Properties')
-			.setDesc('Scan all cards in this board for available properties')
-			.addButton(button => button
-				.setButtonText('Scan')
-				.onClick(async () => {
-					button.setButtonText('Scanning...');
-					button.setDisabled(true);
-
-					try {
-						const dataManager = new DataManager(this.app, board, this.plugin.settings);
-						const cards = await dataManager.getKanbanCards();
-						const foundProperties = new Set<string>();
-
-						cards.forEach(card => {
-							Object.keys(card.frontmatter).forEach(key => {
-								if (key !== board.columnProperty) {
-									foundProperties.add(key);
-								}
-							});
-						});
-
-						let added = false;
-						foundProperties.forEach(prop => {
-							if (!this.plugin.settings.defaultVisibleProperties.includes(prop)) {
-								this.plugin.settings.defaultVisibleProperties.push(prop);
-								added = true;
-							}
-						});
-
-						if (added) {
-							await this.plugin.saveSettings();
-							this.display();
-						} else {
-							button.setButtonText('No new properties found');
-							setTimeout(() => {
-								button.setButtonText('Scan');
-								button.setDisabled(false);
-							}, 2000);
-						}
-					} catch (error) {
-						console.error('Error scanning properties:', error);
-						button.setButtonText('Error');
-					}
+		// Image property names
+		const currentImageProps = board.imageProperties || ['cover', 'image', 'thumbnail', 'banner'];
+		new Setting(imageSection)
+			.setName('Image Property Names')
+			.setDesc('Property names that contain images (comma-separated)')
+			.addTextArea(text => text
+				.setPlaceholder('cover, image, thumbnail, banner')
+				.setValue(currentImageProps.join(', '))
+				.onChange(async (value) => {
+					const props = value
+						.split(',')
+						.map(p => p.trim())
+						.filter(p => p.length > 0);
+					this.plugin.boardManager.updateBoard(board.id, { imageProperties: props });
+					await this.plugin.saveSettings();
+					this.plugin.debouncedRefresh();
 				}));
 	}
 

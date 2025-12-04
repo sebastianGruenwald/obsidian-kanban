@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "108d8b6d1e4f830b",
+        "id": "821927e3f16a6965",
         "type": "tabs",
         "children": [
           {
-            "id": "286113283e4ee9e1",
+            "id": "ebb7f83a7bfa933a",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -180,7 +180,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 1124.5
+    "width": 923.5
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -194,11 +194,13 @@
       "obsidian-kanban:Open Kanban Board": false
     }
   },
-  "active": "286113283e4ee9e1",
+  "active": "ebb7f83a7bfa933a",
   "lastOpenFiles": [
-    "test.md",
     "test 2.md",
+    "test.md",
+    "Pasted image 20251204083636.png",
     "todo 1.md",
+    "Pasted image 20251204083430.png",
     "Welcome.md"
   ]
 }
