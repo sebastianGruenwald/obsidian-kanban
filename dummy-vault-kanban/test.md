@@ -1,9 +1,7 @@
 ---
 status: To Do
-cardColor: mint
+cardColor: orange
 tags:
   - kanban
-  - test
-  - dach
 ---
 # test

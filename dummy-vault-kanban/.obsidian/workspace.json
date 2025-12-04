@@ -172,7 +172,7 @@
               "type": "kanban-board-view",
               "state": {},
               "icon": "layout-dashboard",
-              "title": "Kanban: test"
+              "title": "Kanban: Default Kanban"
             }
           }
         ],
@@ -194,10 +194,10 @@
       "obsidian-kanban:Open Kanban Board": false
     }
   },
-  "active": "ebb7f83a7bfa933a",
+  "active": "54d4a9b0076b09ea",
   "lastOpenFiles": [
-    "test 2.md",
     "test.md",
+    "test 2.md",
     "Pasted image 20251204083636.png",
     "todo 1.md",
     "Pasted image 20251204083430.png",

@@ -1,7 +1,7 @@
-import { App, Menu, TFile, setIcon } from 'obsidian';
+import { App, Menu, TFile, setIcon, Notice } from 'obsidian';
 import { KanbanCard, BoardConfig } from '../types';
 import { DataManager } from '../dataManager';
-import { ColorPickerModal } from '../modals';
+import { ColorPickerModal, ConfirmModal } from '../modals';
 
 export class KanbanCardComponent {
 	private element: HTMLElement;
@@ -360,6 +360,38 @@ export class KanbanCardComponent {
 		}
 
 		menu.addSeparator();
+
+		menu.addItem((item) => {
+			item.setTitle('Delete Card')
+				.setIcon('trash-2')
+				.onClick(async () => {
+					const file = this.app.vault.getAbstractFileByPath(this.card.file);
+					if (file instanceof TFile) {
+						// Confirm deletion
+						const confirmed = await new Promise<boolean>((resolve) => {
+							const modal = new ConfirmModal(
+								this.app,
+								'Delete Card',
+								`Are you sure you want to delete "${this.card.title}"? This will permanently delete the file.`,
+								'Delete',
+								() => resolve(true),
+								() => resolve(false)
+							);
+							modal.open();
+						});
+
+						if (confirmed) {
+							try {
+								await this.app.vault.delete(file);
+								// No need to refresh manually - file watcher will handle it
+							} catch (error) {
+								console.error('Failed to delete file:', error);
+								new Notice('Failed to delete file');
+							}
+						}
+					}
+				});
+		});
 
 		menu.addItem((item) => {
 			item.setTitle('Archive Card')

@@ -415,3 +415,44 @@ export class CreateBoardModal extends Modal {
 		}
 	}
 }
+
+export class ConfirmModal extends Modal {
+	constructor(
+		app: App,
+		private title: string,
+		private message: string,
+		private confirmText: string,
+		private onConfirm: () => void,
+		private onCancel: () => void
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: this.title });
+		contentEl.createEl('p', { text: this.message });
+
+		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+		
+		new Setting(buttonContainer)
+			.addButton(button => button
+				.setButtonText(this.confirmText)
+				.setWarning()
+				.onClick(() => {
+					this.onConfirm();
+					this.close();
+				}))
+			.addButton(button => button
+				.setButtonText('Cancel')
+				.onClick(() => {
+					this.onCancel();
+					this.close();
+				}));
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
