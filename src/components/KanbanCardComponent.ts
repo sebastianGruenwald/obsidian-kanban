@@ -454,9 +454,98 @@ export class KanbanCardComponent {
 			cls: 'kanban-tag-input',
 			attr: { 
 				type: 'text',
-				placeholder: 'tag name'
+				placeholder: 'tag name',
+				autocomplete: 'off'
 			}
 		});
+
+		// Create autocomplete dropdown - attach to document body for proper positioning
+		const suggestionList = document.body.createDiv({ cls: 'kanban-tag-suggestions' });
+		let selectedIndex = -1;
+		let currentSuggestions: string[] = [];
+
+		// Position the dropdown relative to the input
+		const updateDropdownPosition = () => {
+			const rect = input.getBoundingClientRect();
+			suggestionList.style.position = 'fixed';
+			suggestionList.style.left = `${rect.left}px`;
+			suggestionList.style.top = `${rect.bottom + 2}px`;
+			suggestionList.style.minWidth = `${Math.max(150, rect.width)}px`;
+		};
+
+		// Get all unique tags from vault
+		const getAllVaultTags = (): string[] => {
+			const tags = new Set<string>();
+			const files = this.app.vault.getMarkdownFiles();
+			
+			files.forEach(file => {
+				const cache = this.app.metadataCache.getFileCache(file);
+				if (cache?.frontmatter?.tags) {
+					const fileTags = Array.isArray(cache.frontmatter.tags) 
+						? cache.frontmatter.tags 
+						: [cache.frontmatter.tags];
+					fileTags.forEach((t: string) => tags.add(t.replace(/^#/, '')));
+				}
+				if (cache?.tags) {
+					cache.tags.forEach(t => tags.add(t.tag.replace(/^#/, '')));
+				}
+			});
+			
+			// Exclude board tag and already added tags
+			const boardTag = this.boardConfig.tagFilter?.replace('#', '');
+			const existingTags = this.card.frontmatter.tags 
+				? (Array.isArray(this.card.frontmatter.tags) ? this.card.frontmatter.tags : [this.card.frontmatter.tags])
+				: [];
+			const existingClean = existingTags.map((t: string) => t.replace(/^#/, ''));
+			
+			return Array.from(tags)
+				.filter(t => t !== boardTag && !existingClean.includes(t))
+				.sort();
+		};
+
+		const updateSuggestions = (query: string) => {
+			const allTags = getAllVaultTags();
+			currentSuggestions = query 
+				? allTags.filter(tag => tag.toLowerCase().includes(query.toLowerCase()))
+				: allTags;
+			
+			selectedIndex = -1;
+			updateDropdownPosition();
+			renderSuggestions();
+		};
+
+		const renderSuggestions = () => {
+			suggestionList.empty();
+			
+			if (currentSuggestions.length === 0) {
+				suggestionList.style.display = 'none';
+				return;
+			}
+			
+			suggestionList.style.display = 'block';
+			const maxSuggestions = 8;
+			currentSuggestions.slice(0, maxSuggestions).forEach((tag, index) => {
+				const item = suggestionList.createDiv({ 
+					cls: 'kanban-tag-suggestion-item',
+					text: tag
+				});
+				
+				if (index === selectedIndex) {
+					item.addClass('selected');
+				}
+				
+				item.addEventListener('mousedown', (e) => {
+					e.preventDefault();
+					input.value = tag;
+					finishAdd(true);
+				});
+				
+				item.addEventListener('mouseenter', () => {
+					selectedIndex = index;
+					renderSuggestions();
+				});
+			});
+		};
 
 		input.addEventListener('click', (e) => e.stopPropagation());
 
@@ -485,13 +574,33 @@ export class KanbanCardComponent {
 				}
 			}
 
+			suggestionList.remove();
 			inputWrapper.remove();
 			addBtn.style.display = '';
 		};
 
+		input.addEventListener('input', () => {
+			updateSuggestions(input.value.trim().replace(/^#/, ''));
+		});
+
 		input.addEventListener('keydown', async (e) => {
-			if (e.key === 'Enter') {
+			if (e.key === 'ArrowDown') {
 				e.preventDefault();
+				if (currentSuggestions.length > 0) {
+					selectedIndex = Math.min(selectedIndex + 1, currentSuggestions.length - 1);
+					renderSuggestions();
+				}
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				if (currentSuggestions.length > 0) {
+					selectedIndex = Math.max(selectedIndex - 1, -1);
+					renderSuggestions();
+				}
+			} else if (e.key === 'Enter') {
+				e.preventDefault();
+				if (selectedIndex >= 0 && selectedIndex < currentSuggestions.length) {
+					input.value = currentSuggestions[selectedIndex];
+				}
 				await finishAdd(true);
 			} else if (e.key === 'Escape') {
 				await finishAdd(false);
@@ -499,11 +608,12 @@ export class KanbanCardComponent {
 		});
 
 		input.addEventListener('blur', async () => {
-			setTimeout(() => finishAdd(true), 100);
+			setTimeout(() => finishAdd(true), 150);
 		});
 
 		setTimeout(() => {
 			input.focus();
+			updateSuggestions('');
 		}, 0);
 	}
 }

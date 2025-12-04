@@ -1,9 +1,8 @@
 ---
 status: To Do
-cardColor: mint
+cardColor: lavender
 tags:
   - kanban
-  - test
   - dach
 ---
-# test
+# test 2

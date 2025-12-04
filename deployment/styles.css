@@ -1115,6 +1115,7 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
 /* Tag input wrapper */
 .kanban-tag-input-wrapper {
   display: inline-block;
+  position: relative;
 }
 
 .kanban-tag-input {
@@ -1127,6 +1128,40 @@ body.theme-sticky-notes:not([class*="kanban-sticky-show-card-shadows"]) .kanban-
   color: var(--text-normal);
   width: 100px;
   outline: none;
+}
+
+/* Tag autocomplete suggestions */
+.kanban-tag-suggestions {
+  position: fixed;
+  margin-top: 2px;
+  min-width: 150px;
+  max-width: 250px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+
+.kanban-tag-suggestion-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: var(--k-font-tag);
+  color: var(--text-normal);
+  transition: background 0.1s ease;
+}
+
+.kanban-tag-suggestion-item:hover,
+.kanban-tag-suggestion-item.selected {
+  background: var(--background-modifier-hover);
+}
+
+.kanban-tag-suggestion-item.selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
 }
 
 .kanban-card-property {
