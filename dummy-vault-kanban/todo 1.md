@@ -1,6 +1,7 @@
 ---
 status: To Do
 cardColor: yellow
-tags: kanban
+tags:
+  - kanban
 ---
 # todo 1

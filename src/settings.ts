@@ -107,7 +107,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.boardManager.updateBoard(board.id, { tagFilter: value });
 					await this.plugin.saveSettings();
-					this.plugin.refreshAllViews();
+					this.plugin.debouncedRefresh();
 				}));
 
 		// Column property
@@ -120,7 +120,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.boardManager.updateBoard(board.id, { columnProperty: value });
 					await this.plugin.saveSettings();
-					this.plugin.refreshAllViews();
+					this.plugin.debouncedRefresh();
 				}));
 
 		// Default columns
@@ -137,7 +137,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 						.filter(col => col.length > 0);
 					this.plugin.boardManager.updateBoard(board.id, { defaultColumns: columns });
 					await this.plugin.saveSettings();
-					this.plugin.refreshAllViews();
+					this.plugin.debouncedRefresh();
 				}));
 
 		// Custom columns management
@@ -159,7 +159,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.boardManager.updateBoard(board.id, { sortBy: value as any });
 					await this.plugin.saveSettings();
-					this.plugin.refreshAllViews();
+					this.plugin.debouncedRefresh();
 				}));
 
 		new Setting(contentDiv)
@@ -172,7 +172,7 @@ export class KanbanSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.boardManager.updateBoard(board.id, { sortOrder: value as any });
 					await this.plugin.saveSettings();
-					this.plugin.refreshAllViews();
+					this.plugin.debouncedRefresh();
 				}));
 
 		// Card Density

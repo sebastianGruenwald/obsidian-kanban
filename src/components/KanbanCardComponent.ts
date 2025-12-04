@@ -107,6 +107,15 @@ export class KanbanCardComponent {
 
 		// Container for tags and properties
 		const body = cardEl.createDiv({ cls: 'kanban-card-body' });
+		
+		// Footer for dates and progress
+		const footer = cardEl.createDiv({ cls: 'kanban-card-footer' });
+		
+		this.renderProperties(body, footer);
+	}
+
+	private renderProperties(body: HTMLElement, footer?: HTMLElement): void {
+		const visibleProperties = this.boardConfig.visibleProperties;
 
 		if (visibleProperties.includes('tags')) {
 			const tags = this.card.frontmatter.tags 
@@ -158,23 +167,23 @@ export class KanbanCardComponent {
 			}
 		});
 
-		// Footer for dates
-		const footer = cardEl.createDiv({ cls: 'kanban-card-footer' });
+		// Footer for dates (only if footer element is provided)
+		if (footer) {
+			if (visibleProperties.includes('created') && this.card.created) {
+				const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
+				dateEl.setAttribute('aria-label', 'Created');
+				dateEl.setText(new Date(this.card.created).toLocaleDateString());
+			}
 
-		if (visibleProperties.includes('created') && this.card.created) {
-			const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
-			dateEl.setAttribute('aria-label', 'Created');
-			dateEl.setText(new Date(this.card.created).toLocaleDateString());
+			if (visibleProperties.includes('modified') && this.card.modified) {
+				const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
+				dateEl.setAttribute('aria-label', 'Modified');
+				dateEl.setText(new Date(this.card.modified).toLocaleDateString());
+			}
+
+			// Subtask Progress
+			this.renderSubtaskProgress(footer);
 		}
-
-		if (visibleProperties.includes('modified') && this.card.modified) {
-			const dateEl = footer.createSpan({ cls: 'kanban-card-date' });
-			dateEl.setAttribute('aria-label', 'Modified');
-			dateEl.setText(new Date(this.card.modified).toLocaleDateString());
-		}
-
-		// Subtask Progress
-		this.renderSubtaskProgress(footer);
 	}
 
 	private getTagColor(tag: string): string {
@@ -408,11 +417,28 @@ export class KanbanCardComponent {
 
 			await this.dataManager.updateCardTags(this.card.file, updatedTags);
 			
-			if (this.onTitleChange) {
-				this.onTitleChange();
-			}
+			// Update card in-place instead of full refresh
+			this.card.frontmatter.tags = updatedTags.length === 1 ? updatedTags[0] : (updatedTags.length > 0 ? updatedTags : undefined);
+			this.refreshCardContent();
 		} catch (error) {
 			console.error('Failed to remove tag:', error);
+		}
+	}
+
+	private refreshCardContent(): void {
+		// Find and update only the card body and footer
+		const bodyEl = this.element.querySelector('.kanban-card-body');
+		const footerEl = this.element.querySelector('.kanban-card-footer');
+		
+		if (bodyEl) {
+			bodyEl.empty();
+		}
+		if (footerEl) {
+			footerEl.empty();
+		}
+		
+		if (bodyEl && footerEl) {
+			this.renderProperties(bodyEl as HTMLElement, footerEl as HTMLElement);
 		}
 	}
 
@@ -450,9 +476,9 @@ export class KanbanCardComponent {
 						cleanTags.push(newTag);
 						await this.dataManager.updateCardTags(this.card.file, cleanTags);
 						
-						if (this.onTitleChange) {
-							this.onTitleChange();
-						}
+						// Update card in-place instead of full refresh
+						this.card.frontmatter.tags = cleanTags.length === 1 ? cleanTags[0] : cleanTags;
+						this.refreshCardContent();
 					}
 				} catch (error) {
 					console.error('Failed to add tag:', error);

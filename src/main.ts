@@ -17,14 +17,14 @@ export default class KanbanPlugin extends Plugin {
 	settings!: KanbanSettings;
 	boardManager!: BoardManager;
 	private views: Set<KanbanView> = new Set();
-	private debouncedRefresh!: () => void;
+	private debouncedRefreshInternal!: () => void;
 
 	async onload() {
 		await this.loadSettings();
 		this.boardManager = new BoardManager(this.settings.boards);
 
 		// Initialize debounced refresh
-		this.debouncedRefresh = debounce(
+		this.debouncedRefreshInternal = debounce(
 			() => this.refreshAllViews(),
 			DEFAULTS.DEBOUNCE_DELAY
 		);
@@ -244,6 +244,13 @@ export default class KanbanPlugin extends Plugin {
 	refreshAllViews() {
 		for (const view of this.views.values()) {
 			view.refresh();
+		}
+	}
+
+	// Public method for settings to trigger debounced refresh
+	debouncedRefresh() {
+		if (this.debouncedRefreshInternal) {
+			this.debouncedRefreshInternal();
 		}
 	}
 
