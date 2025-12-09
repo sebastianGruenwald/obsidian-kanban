@@ -26,7 +26,14 @@ export class KanbanCardComponent {
 	}
 
 	private render(): HTMLElement {
-		const cardEl = this.container.createDiv({ cls: 'kanban-card' });
+		// Check if container is a placeholder - if so, reuse it instead of creating a child div
+		const isPlaceholder = this.container.hasClass('kanban-card-placeholder-lazy');
+		const cardEl = isPlaceholder ? this.container : this.container.createDiv({ cls: 'kanban-card' });
+		
+		// Add kanban-card class if reusing placeholder
+		if (isPlaceholder) {
+			cardEl.addClass('kanban-card');
+		}
 
 		// Apply density class
 		if (this.boardConfig.cardDensity) {

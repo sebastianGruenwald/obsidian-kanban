@@ -22,7 +22,7 @@ export class KanbanColumnComponent {
 		private cards: KanbanCard[],
 		private allColumns: string[],
 		private callbacks: {
-			onCardMove: (filePath: string, newColumn: string) => void;
+			onCardMove: (filePath: string, newColumn: string) => void | Promise<void>;
 			onCardArchive: (card: KanbanCard) => void;
 			onColumnRename: () => void;
 			onColumnDelete: () => void;
@@ -73,9 +73,13 @@ export class KanbanColumnComponent {
 		// Create placeholder elements for all cards
 		const placeholders: HTMLElement[] = [];
 		for (let i = 0; i < this.cards.length; i++) {
+			const card = this.cards[i];
 			const placeholder = this.contentEl.createDiv({
 				cls: 'kanban-card-placeholder-lazy',
-				attr: { 'data-card-index': String(i) }
+				attr: { 
+					'data-card-index': String(i),
+					'data-file-path': card.file  // Add file path to placeholder for drag-and-drop
+				}
 			});
 			placeholder.style.minHeight = '60px'; // Minimum height for placeholder
 			placeholders.push(placeholder);

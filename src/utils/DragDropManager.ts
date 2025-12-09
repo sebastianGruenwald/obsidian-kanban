@@ -1,6 +1,7 @@
 import Sortable from 'sortablejs';
 
 export class DragDropManager {
+    private draggedFilePath: string | null = null;
 
     public initColumnSorting(
         container: HTMLElement,
@@ -28,7 +29,7 @@ export class DragDropManager {
     public initCardSorting(
         container: HTMLElement,
         columnName: string,
-        onCardMove: (filePath: string, newColumn: string) => void
+        onCardMove: (filePath: string, newColumn: string) => void | Promise<void>
     ): Sortable {
         return new Sortable(container, {
             group: 'kanban-cards',
@@ -36,12 +37,37 @@ export class DragDropManager {
             ghostClass: 'kanban-card-placeholder',
             delay: 200, // Delay for touch devices to prevent accidental drags
             delayOnTouchOnly: true,
-            onAdd: (evt) => {
+            onStart: (evt) => {
+                // Store the file path when drag starts
                 const itemEl = evt.item;
-                const filePath = itemEl.getAttribute('data-file-path');
-                if (filePath) {
-                    onCardMove(filePath, columnName);
+                this.draggedFilePath = itemEl.getAttribute('data-file-path');
+            },
+            onAdd: async (evt) => {
+                const itemEl = evt.item;
+                let filePath = itemEl.getAttribute('data-file-path');
+                
+                // If attribute is missing, try to get it from the clone
+                if (!filePath && evt.clone) {
+                    filePath = evt.clone.getAttribute('data-file-path');
                 }
+                
+                // Fallback to stored value from onStart
+                if (!filePath && this.draggedFilePath) {
+                    filePath = this.draggedFilePath;
+                    // Restore the attribute on the element
+                    itemEl.setAttribute('data-file-path', filePath);
+                }
+                
+                if (filePath) {
+                    await onCardMove(filePath, columnName);
+                }
+                
+                // Clear the stored path
+                this.draggedFilePath = null;
+            },
+            onEnd: () => {
+                // Clear the stored path if drag ends without adding to a new column
+                this.draggedFilePath = null;
             }
         });
     }
