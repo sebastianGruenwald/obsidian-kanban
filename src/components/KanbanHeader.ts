@@ -2,6 +2,7 @@ import { App, TextComponent, setIcon, Menu } from 'obsidian';
 import { BoardConfig, KanbanSettings } from '../types';
 import KanbanPlugin from '../main';
 import { AddColumnModal } from '../modals';
+import { debounce } from '../utils';
 
 export class KanbanHeader {
     private tagFilterPopup: HTMLElement | null = null;
@@ -41,9 +42,9 @@ export class KanbanHeader {
         const searchInput = new TextComponent(searchContainer);
         searchInput.setPlaceholder('Search cards...');
         searchInput.setValue(searchQuery);
-        searchInput.onChange((value) => {
+        searchInput.onChange(debounce((value: string) => {
             this.onSearch(value);
-        });
+        }, 250));
 
         // Board selector
         const boardSelect = controls.createEl('select', { cls: 'kanban-board-selector' });
@@ -412,7 +413,8 @@ export class KanbanHeader {
             item.createSpan({ text: prop.label, cls: 'kanban-popup-item-label' });
 
             const toggleProperty = async () => {
-                const currentProps = this.currentBoard.visibleProperties;
+                const latestBoard = this.plugin.boardManager.getBoard(this.currentBoard.id);
+                const currentProps = latestBoard ? latestBoard.visibleProperties : this.currentBoard.visibleProperties;
                 let newProps: string[];
 
                 if (checkbox.checked) {

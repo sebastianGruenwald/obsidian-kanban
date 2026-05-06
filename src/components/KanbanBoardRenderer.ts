@@ -130,7 +130,6 @@ export class KanbanBoardRenderer {
     }
 
     private renderSwimlanes(board: BoardConfig, cards: KanbanCard[], columns: string[]): void {
-        this.container.empty();
         this.container.addClass('has-swimlanes');
         const swimlaneProp = board.swimlaneProperty!;
 

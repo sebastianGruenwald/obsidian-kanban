@@ -14,16 +14,34 @@ export class DataManager {
 	) { }
 
 	async getKanbanCards(): Promise<KanbanCard[]> {
+		this.clearTagCache();
 		try {
 			const files = this.app.vault.getMarkdownFiles();
 			const cards: KanbanCard[] = [];
 
 			for (const file of files) {
-				if (await this.shouldIncludeFile(file)) {
-					const card = await this.createCardFromFile(file);
-					if (card) {
-						cards.push(card);
-					}
+				try {
+					const cache = this.app.metadataCache.getFileCache(file);
+
+					// Inclusion check (previously shouldIncludeFile)
+					const tags = getAllTags(cache);
+					if (!tags.includes(this.boardConfig.tagFilter)) continue;
+					if (cache?.frontmatter?.archived === true) continue;
+
+					// Card construction (previously createCardFromFile)
+					const frontmatter = cache?.frontmatter || {};
+					const column = frontmatter[this.boardConfig.columnProperty] || DEFAULTS.UNCATEGORIZED_COLUMN;
+					cards.push({
+						file: file.path,
+						title: file.basename,
+						column: column,
+						created: file.stat.ctime,
+						modified: file.stat.mtime,
+						dueDate: frontmatter.dueDate ? Date.parse(frontmatter.dueDate) : undefined,
+						frontmatter: frontmatter
+					});
+				} catch (error) {
+					console.error(`Error creating card from file ${file.path}:`, error);
 				}
 			}
 
@@ -35,43 +53,8 @@ export class DataManager {
 		}
 	}
 
-	private async shouldIncludeFile(file: TFile): Promise<boolean> {
-		const cache = this.app.metadataCache.getFileCache(file);
-
-		// Check if file has the required tag
-		const tags = getAllTags(cache);
-		if (!tags.includes(this.boardConfig.tagFilter)) {
-			return false;
-		}
-
-		// Check if archived
-		if (cache?.frontmatter?.archived === true) {
-			return false;
-		}
-
-		return true;
-	}
-
-	private async createCardFromFile(file: TFile): Promise<KanbanCard | null> {
-		try {
-			const cache = this.app.metadataCache.getFileCache(file);
-			const frontmatter = cache?.frontmatter || {};
-			const column = frontmatter[this.boardConfig.columnProperty] || DEFAULTS.UNCATEGORIZED_COLUMN;
-
-			return {
-				file: file.path,
-				title: file.basename,
-				column: column,
-				created: file.stat.ctime,
-				modified: file.stat.mtime,
-				dueDate: frontmatter.dueDate ? Date.parse(frontmatter.dueDate) : undefined,
-				// Content is lazy loaded or not loaded if not needed
-				frontmatter: frontmatter
-			};
-		} catch (error) {
-			console.error(`Error creating card from file ${file.path}:`, error);
-			return null;
-		}
+	clearTagCache(): void {
+		this.tagCache = null;
 	}
 
 	private sortCards(cards: KanbanCard[]): KanbanCard[] {
@@ -308,14 +291,16 @@ export class DataManager {
 
 	// Helper methods removed as they are replaced by app.fileManager.processFrontMatter
 
-	async runAutomations(cards: KanbanCard[]): Promise<void> {
+	async runAutomations(cards: KanbanCard[]): Promise<boolean> {
 		if (!this.boardConfig.autoMoveCompleted && !this.boardConfig.autoArchiveDelay) {
-			return;
+			return false;
 		}
 
 		const lastColumn = this.boardConfig.columnOrder.length > 0
 			? this.boardConfig.columnOrder[this.boardConfig.columnOrder.length - 1]
 			: this.boardConfig.defaultColumns[this.boardConfig.defaultColumns.length - 1];
+
+		let archived = false;
 
 		for (const card of cards) {
 			// Auto-move completed cards
@@ -332,9 +317,12 @@ export class DataManager {
 				const daysSinceModified = (Date.now() - card.modified) / (1000 * 60 * 60 * 24);
 				if (daysSinceModified > this.boardConfig.autoArchiveDelay) {
 					await this.archiveCard(card.file);
+					archived = true;
 				}
 			}
 		}
+
+		return archived;
 	}
 
 	private isCardCompleted(card: KanbanCard): boolean {

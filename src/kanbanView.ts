@@ -25,6 +25,7 @@ export class KanbanView extends ItemView {
 	private headerComponent: KanbanHeader | null = null;
 	private boardRenderer: KanbanBoardRenderer | null = null;
 	private dragDropManager: DragDropManager;
+	private lastRenderedBoardId: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf, private plugin: KanbanPlugin) {
 		super(leaf);
@@ -33,9 +34,16 @@ export class KanbanView extends ItemView {
 	}
 
 	private updateCurrentBoard() {
+		const prevBoardId = this.currentBoard?.id;
 		this.currentBoard = this.plugin.boardManager.getBoard(this.plugin.settings.activeBoard);
 		if (this.currentBoard) {
 			this.dataManager = new DataManager(this.app, this.currentBoard, this.plugin.settings);
+			// Reset header and renderer when board changes so they are rebuilt with new config
+			if (prevBoardId !== this.currentBoard.id) {
+				this.headerComponent = null;
+				this.boardRenderer = null;
+				this.lastRenderedBoardId = null;
+			}
 		}
 	}
 
@@ -75,11 +83,9 @@ export class KanbanView extends ItemView {
 
 		this.cards = await this.dataManager.getKanbanCards();
 
-		// Run automations
-		await this.dataManager.runAutomations(this.cards);
-
-		// Re-fetch cards if automations might have changed them
-		if (this.currentBoard.autoMoveCompleted || this.currentBoard.autoArchiveDelay > 0) {
+		// Run automations; only re-fetch if archiving occurred (cards removed from board)
+		const archived = await this.dataManager.runAutomations(this.cards);
+		if (archived) {
 			this.cards = await this.dataManager.getKanbanCards();
 		}
 
@@ -115,7 +121,11 @@ export class KanbanView extends ItemView {
 			);
 		}
 
-		this.headerComponent.render(this.searchQuery);
+		// Only rebuild header DOM when the board has changed
+		if (this.lastRenderedBoardId !== this.currentBoard.id) {
+			this.headerComponent.render(this.searchQuery);
+			this.lastRenderedBoardId = this.currentBoard.id;
+		}
 	}
 
 	private renderBoard(): void {
@@ -231,13 +241,9 @@ export class KanbanView extends ItemView {
 			await this.dataManager.updateCardColumn(filePath, newColumn);
 			this.cards = await this.dataManager.getKanbanCards();
 
-			// Run automations
-			await this.dataManager.runAutomations(this.cards);
-
-			// Re-fetch cards if automations might have changed them (e.g. archived)
-			// Optimization: We could return modified cards from runAutomations to avoid re-fetch
-			// For now, simple re-fetch ensures consistency
-			if (this.currentBoard?.autoMoveCompleted || (this.currentBoard?.autoArchiveDelay ?? 0) > 0) {
+			// Run automations; only re-fetch if archiving occurred
+			const archived = await this.dataManager.runAutomations(this.cards);
+			if (archived) {
 				this.cards = await this.dataManager.getKanbanCards();
 			}
 
